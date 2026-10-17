@@ -52,7 +52,7 @@ Tunables live in one config object so tuning is a one-file job: `maxSpeed`, `acc
 ### 2.4 Track & collisions
 - Track defined as a polyline centreline plus width. Rendered as asphalt on grass with painted edges.
 - Off-track detection by distance from centreline. Off-track = heavy drag and grip penalty, no hard walls (hard walls on mobile feel punishing). Drift chain breaks when off-track.
-- Optional soft barriers (tyre stacks) on the outside of the two hardest corners as visual guides, pushing the car back gently.
+- Rumble strips on the outside of the two hardest corners as the only visual guide (see section 3.6). No barriers or props.
 
 ### 2.5 Scoring
 - Points accrue each frame while drifting: `points += driftAngle × speed × dt × multiplier`.
@@ -61,23 +61,68 @@ Tunables live in one config object so tuning is a one-file job: `maxSpeed`, `acc
 - Run ends when a 60-second timer hits zero. Final score compared against local best.
 
 ### 2.6 Game loop & screens
-1. **Title** — logo, "Tap to drive", best score, sound toggle.
+1. **Title** — ghost car laps the empty track with a thumb-drag hint (see section 3.8), "Tap to drive", best score, sound toggle.
 2. **Countdown** — 3-2-1 overlaid on the track, car static.
 3. **Playing** — HUD: timer (top centre), score (top left), multiplier badge (top right, pulses when it increases), current chain score floating near the car.
-4. **Game over** — final score, best score, "new best" callout, Restart button (large, bottom), Share button (Web Share API with score text).
+4. **Game over** — camera zooms out to show the whole track with the player's rubber on it, then final score, best score, "new best" callout, Restart button (large, bottom), Share button (Web Share API sending the zoomed-out frame as an image plus score text).
 5. **Pause** — resume / restart / sound.
 
 ---
 
-## 3. Look & Feel
+## 3. Visual Direction
 
-- **Style:** flat, bold colours, minimal detail so it reads at phone size. Dusk palette (deep blue asphalt, orange horizon tint, cream track markings).
-- **Juice (cheap, high impact):**
-  - Tyre skid marks persist on the track while drifting (drawn to an offscreen canvas, faded slowly).
-  - Smoke particles from rear wheels, intensity scales with drift angle.
-  - Subtle screen shake on chain bank, scaled by chain size.
-  - Haptic tick (`navigator.vibrate`) on multiplier increase and chain bank, where supported.
-- **Audio:** one engine loop pitched by speed, tyre squeal loop gained by drift angle, three short SFX (chain bank, multiplier up, countdown). Web Audio API, unlocked on first touch. Muted by default until the player taps the sound toggle or starts a run (iOS autoplay rules).
+### 3.1 Concept: the track is the canvas
+Everything the player does is written onto the asphalt as rubber. The car is small and quiet; the skid marks are the hero. By the end of a 60-second run the track should look like a drawing the player made, and the game-over screen shows it to them. The persistent skid canvas (a performance choice in section 4) is also the art direction, which gives the game a distinctive look and a sharable moment for free.
+
+### 3.2 Principles
+1. **Quiet world, loud rubber.** Track, grass and car sit in low-saturation tones. Skid marks, smoke and score pops are the only high-contrast elements during play.
+2. **Nothing precious under the thumb.** In portrait with drag-to-steer, the thumb and forearm cover roughly the bottom third of the screen. The car sits at about 60% of screen height, the HUD lives in the top safe area, and no information is ever placed low during play.
+3. **Read it at a glance or don't show it.** The player watches the car, not the screen corners. Every HUD element must work in peripheral vision: large, few, high contrast, and changing shape or motion (not just number) when something matters.
+
+### 3.3 Palette (roles, not moods)
+Values are starting points and live in `config.ts` alongside the physics tunables so they can be adjusted on-device through the debug panel.
+
+| Role | Value | Notes |
+|---|---|---|
+| Asphalt | `#1C2230` | Cool near-black with a hint of blue. Not pure black, so rubber still reads on it |
+| Track edge line | `#E8DCC4` | Warm cream. The only painted detail on the track |
+| Off-track surface | muted olive, e.g. `#4A5238` | Deliberately dull so the eye is not pulled off the road |
+| Skid marks | warm black at 70% alpha | Builds up with repeated passes |
+| Accent | `#FF5A2D` | Hot orange-red. Multiplier badge, chain score pops, smoke tint at high drift angle. **Never decorative.** If it appears anywhere else it has stopped working |
+| HUD text | `#F2EEE6` | Off-white |
+
+Check cream-on-asphalt and accent-on-asphalt at 4.5:1 or better before committing. Verify the olive reads correctly on a dim OLED.
+
+### 3.4 Typography
+One family: a wide or extended grotesk with a heavy weight and **tabular figures**, so the timer does not jitter as digits change. Score and timer at a minimum of 28px rendered; multiplier badge larger. The chain score floating near the car is the most important text in the game: the largest element, scaling with chain size, with a short pop-and-settle rather than a fade.
+
+### 3.5 HUD layout (portrait)
+- Timer top centre, score top left, multiplier top right. All inside the safe area.
+- A very light scrim behind HUD text only if the track shows through too noisily.
+- The multiplier badge changes **shape**, not just number: a ring fills over the 2 seconds before the next step so the player feels the next tier coming without reading. When the chain breaks, the ring empties with a hard snap, no fade.
+- Chain score pops at the car, not in the HUD.
+
+### 3.6 Car and track
+- Car is roughly 36 to 44px long at phone scale. A detailed sprite becomes mud at that size. Use a two-tone silhouette with a lighter roof so heading is unambiguous, and rear wheels drawn slightly wider so smoke and rubber visibly come from them.
+- Track has one strong, consistent edge line. Rumble strips appear only on the two hardest corners, which doubles as the hint for where the best drifts are.
+- No tyre-stack barriers or roadside props. They add detail exactly where the player should be watching the car.
+
+### 3.7 The four moments to design properly
+In priority order:
+1. **First drift.** Rubber appears, squeal starts, small haptic tick. Nothing else.
+2. **Multiplier step-up.** Ring completes, badge punches up one size, accent flash on the badge only.
+3. **Chain bank.** Score pop at the car, short screen shake scaled by chain size. The rubber on the track is already the record.
+4. **Game over.** Camera zooms out to show the whole track with the player's rubber on it, then score and buttons overlay. This frame is the share image: the Web Share API sends the image, not just text.
+
+### 3.8 Title screen
+No logo over a static scene. Show the empty track with a ghost car doing one slow lap, laying rubber, with a thumb-shaped hint dragging left and right in time with the steering. Two seconds of that teaches the control better than text. Below it: "Tap to drive" and the best score. Nothing else.
+
+### 3.9 Audio
+One engine loop pitched by speed, a tyre squeal loop gained by drift angle, and three short SFX (chain bank, multiplier up, countdown). Web Audio API, unlocked on first touch. Muted by default until the player taps the sound toggle or starts a run (iOS autoplay rules).
+
+### 3.10 Open question and device checks
+- **Tone assumption:** this direction assumes cold and precise (time-attack) rather than warm and toy-like. If the toy feel is wanted, move to a chunkier car, a brighter off-track and a softer accent; the concept still holds.
+- Cannot be judged from a screenshot: legibility in sunlight, the olive on a dim OLED, and whether 36px is too small on a 6.7-inch phone at arm's length. Check on two real phones outdoors during milestone 4.
 
 ---
 
@@ -150,7 +195,7 @@ Each milestone ends in something playable. Commits are small and follow `type(sc
 | 1 | **Car moves** | Input module, car physics, camera follow, debug rectangle for the car | Car can be driven around an empty field with one thumb and it drifts |
 | 2 | **Track** | Track data, rendering, off-track detection, lap detection | Can drive laps, going off-track feels bad |
 | 3 | **Scoring loop** | Drift detection, chain, multiplier, timer, HUD, title and game-over screens, best score | A complete 60-second run with a score can be played and restarted |
-| 4 | **Juice** | Skid marks, smoke, screen shake, haptics, car sprite, palette pass | Game looks and feels like a game, not a prototype |
+| 4 | **Juice** | Skid marks, smoke, screen shake, haptics, car silhouette, palette and type pass, multiplier ring, game-over zoom-out, outdoor device check | Game looks and feels like a game, not a prototype |
 | 5 | **Audio** | Engine, squeal, SFX, mute toggle, iOS unlock | Sound works on iPhone and Android with headphones |
 | 6 | **Ship** | PWA manifest and service worker, GitHub Pages deploy workflow, README, device test pass | Installable from a public URL, plays offline |
 
