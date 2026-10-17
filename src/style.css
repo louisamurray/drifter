@@ -88,9 +88,10 @@ body {
   left: 0;
   right: 0;
   text-align: center;
-  font-size: clamp(44px, 14vw, 72px);
+  font-size: clamp(32px, 10.5vw, 60px);
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.06em;
+  padding: 0 16px;
   text-shadow: 0 2px 24px rgba(0, 0, 0, 0.5);
 }
 .title-cta {
