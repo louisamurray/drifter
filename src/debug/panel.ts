@@ -1,4 +1,5 @@
 import { config } from '../config';
+import { debugState } from './state';
 
 type NumericRecord = Record<string, number>;
 
@@ -39,6 +40,19 @@ export function mountDebugPanel(): void {
   root.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
   });
+
+  const auto = document.createElement('label');
+  auto.style.display = 'block';
+  auto.style.margin = '4px 0';
+  const check = document.createElement('input');
+  check.type = 'checkbox';
+  check.id = 'debug-autopilot';
+  check.addEventListener('change', () => {
+    debugState.autopilot = check.checked;
+  });
+  auto.append(check, ' autopilot drives');
+  root.append(auto);
+  root.append(makeRow(debugState as unknown as NumericRecord, 'aggression'));
 
   for (const group of groups) {
     const heading = document.createElement('div');
