@@ -116,7 +116,7 @@ One family: a wide or extended grotesk with a heavy weight and **tabular figures
 
 ### 3.7 The four moments to design properly
 In priority order:
-1. **First drift.** Rubber appears, squeal starts, small haptic tick. Nothing else.
+1. **First drift.** Rubber appears, squeal starts, small haptic tick. Nothing else. Haptics are Android only: iOS exposes no vibration API to web pages, and the iOS 18 switch-toggle tick only fires inside a touch handler, which in-game events never are.
 2. **Multiplier step-up.** Ring completes, badge punches up one size, accent flash on the badge only.
 3. **Chain bank.** Score pop at the car, short screen shake scaled by chain size. The rubber on the track is already the record.
 4. **Game over.** Camera zooms out to show the whole track with the player's rubber on it, then score and buttons overlay. This frame is the share image: the Web Share API sends the image, not just text.
