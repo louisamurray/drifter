@@ -2,9 +2,11 @@ import { config } from './config';
 import { CanvasSurface } from './core/canvas';
 import { PointerInput } from './core/input';
 import { GameLoop } from './core/loop';
-import { createCar, stepCar, telemetry, type CarState } from './game/car';
+import { createCar, ROAD, stepCar, telemetry, type CarState, type Surface } from './game/car';
+import { buildTrack, CIRCUIT, isOffTrack, nearestOnTrack, startPose } from './game/track';
+import { createLapState, updateLaps } from './game/laps';
 import { createCamera, updateCamera } from './render/camera';
-import { beginWorld, drawCar, drawDebug, drawField, endWorld } from './render/draw';
+import { beginWorld, drawCar, drawDebug, drawTrack, endWorld } from './render/draw';
 import { mountDebugPanel } from './debug/panel';
 
 const canvasEl = document.getElementById('game');
@@ -16,8 +18,13 @@ const surface = new CanvasSurface(canvasEl);
 const { ctx, viewport } = surface;
 const input = new PointerInput(canvasEl);
 
-const car = createCar();
+const track = buildTrack({ ...CIRCUIT, width: config.track.width, scale: config.track.scale });
+const start = startPose(track);
+const car = createCar(start.x, start.y, start.heading);
 const prev: CarState = { ...car };
+const laps = createLapState();
+let offTrack = false;
+const grass: Surface = config.offTrack;
 const camera = createCamera(car);
 
 let frames = 0;
@@ -26,7 +33,10 @@ let fps = 0;
 
 function update(dt: number): void {
   Object.assign(prev, car);
-  stepCar(car, input.state, dt, config.physics);
+  stepCar(car, input.state, dt, config.physics, offTrack ? grass : ROAD);
+  const q = nearestOnTrack(track, car.x, car.y);
+  offTrack = isOffTrack(track, q.distance);
+  updateLaps(laps, q.s, track.length, dt);
   updateCamera(camera, car, telemetry(car).speed, dt);
 }
 
@@ -39,7 +49,7 @@ function lerpAngle(a: number, b: number, t: number): number {
 
 function render(alpha: number): void {
   const { width, height } = viewport;
-  ctx.fillStyle = config.palette.asphalt;
+  ctx.fillStyle = config.palette.offTrack;
   ctx.fillRect(0, 0, width, height);
 
   const x = prev.x + (car.x - prev.x) * alpha;
@@ -47,7 +57,7 @@ function render(alpha: number): void {
   const heading = lerpAngle(prev.heading, car.heading, alpha);
 
   beginWorld(ctx, viewport, camera);
-  drawField(ctx, viewport, camera);
+  drawTrack(ctx, track);
   drawCar(ctx, x, y, heading);
   endWorld(ctx);
 
@@ -63,6 +73,8 @@ function render(alpha: number): void {
     viewport,
     car,
     telemetry(car),
+    laps,
+    offTrack,
     fps,
     input.state.steer,
     input.state.throttle,
