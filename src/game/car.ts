@@ -20,6 +20,15 @@ export interface CarTelemetry {
   speed: number;
 }
 
+/** Multipliers for the surface under the car. On the road all are 1. */
+export interface Surface {
+  accel: number;
+  drag: number;
+  grip: number;
+}
+
+export const ROAD: Surface = { accel: 1, drag: 1, grip: 1 };
+
 export function createCar(x = 0, y = 0, heading = -Math.PI / 2): CarState {
   return { x, y, heading, vx: 0, vy: 0, drifting: false };
 }
@@ -41,7 +50,13 @@ export function telemetry(car: CarState): CarTelemetry {
  * Grip falls with steer and speed so the rear breaks loose, and drops further
  * once drifting so the slide holds. Mutates and returns `car`.
  */
-export function stepCar(car: CarState, input: InputState, dt: number, p: PhysicsConfig): CarState {
+export function stepCar(
+  car: CarState,
+  input: InputState,
+  dt: number,
+  p: PhysicsConfig,
+  surface: Surface = ROAD,
+): CarState {
   // Decompose in the current heading frame
   let fx = Math.cos(car.heading);
   let fy = Math.sin(car.heading);
@@ -57,9 +72,9 @@ export function stepCar(car: CarState, input: InputState, dt: number, p: Physics
   }
 
   // Longitudinal
-  const accel = car.drifting ? p.accel * p.driftAccelBoost : p.accel;
+  const accel = (car.drifting ? p.accel * p.driftAccelBoost : p.accel) * surface.accel;
   vF += accel * input.throttle * dt;
-  vF -= p.drag * vF * dt;
+  vF -= p.drag * surface.drag * vF * dt;
   if (input.throttle === 0) {
     const roll = p.rolling * dt;
     vF = Math.abs(vF) <= roll ? 0 : vF - Math.sign(vF) * roll;
@@ -81,9 +96,10 @@ export function stepCar(car: CarState, input: InputState, dt: number, p: Physics
   vL = wx * -fy + wy * fx;
 
   // Lateral grip, reduced by steering effort at speed so the car can break loose
-  const grip = car.drifting
+  const baseGrip = car.drifting
     ? p.gripDrift
     : p.gripNormal * (1 - p.steerGripLoss * Math.abs(input.steer) * speedRatio);
+  const grip = baseGrip * surface.grip;
   vL *= Math.exp(-grip * dt);
 
   car.vx = fx * vF + -fy * vL;
