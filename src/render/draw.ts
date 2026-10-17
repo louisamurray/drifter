@@ -151,3 +151,50 @@ export function drawDebug(
 function fmt(seconds: number): string {
   return seconds.toFixed(2) + 's';
 }
+
+export interface Popup {
+  text: string;
+  /** Screen-space origin. */
+  x: number;
+  y: number;
+  age: number;
+  life: number;
+  color: string;
+  size: number;
+}
+
+/** Floating score text in screen space: rises, holds, then fades. */
+export function drawPopups(ctx: CanvasRenderingContext2D, popups: Popup[]): void {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const p of popups) {
+    const t = p.age / p.life;
+    const rise = 40 * Math.min(1, t * 3);
+    const alpha = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
+    const scale = t < 0.15 ? 1 + (0.15 - t) * 3 : 1;
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.fillStyle = p.color;
+    ctx.font = `800 ${String(Math.round(p.size * scale))}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.fillText(p.text, p.x, p.y - rise);
+  }
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'start';
+}
+
+/** Live chain total beside the car while a chain is open. */
+export function drawChain(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  chain: number,
+  multiplier: number,
+): void {
+  if (chain <= 0) return;
+  const size = 22 + Math.min(18, Math.log10(chain + 1) * 6);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = multiplier > 1 ? config.palette.accent : config.palette.hudText;
+  ctx.font = `800 ${String(Math.round(size))}px ui-sans-serif, system-ui, sans-serif`;
+  ctx.fillText(`+${String(Math.round(chain))}`, x, y);
+  ctx.textAlign = 'start';
+}

@@ -1,5 +1,6 @@
 import { config } from '../config';
 import type { CarState } from '../game/car';
+import type { Track } from '../game/track';
 
 export interface Camera {
   x: number;
@@ -16,15 +17,46 @@ function smooth(rate: number, dt: number): number {
   return 1 - Math.exp(-rate * dt);
 }
 
+export function moveCameraTo(cam: Camera, x: number, y: number, zoom: number, dt: number): void {
+  const c = config.camera;
+  const k = smooth(c.followRate, dt);
+  cam.x += (x - cam.x) * k;
+  cam.y += (y - cam.y) * k;
+  cam.zoom += (zoom - cam.zoom) * smooth(c.zoomRate, dt);
+}
+
+/** Follow the car with velocity lead, zooming out with speed. */
 export function updateCamera(cam: Camera, car: CarState, speed: number, dt: number): void {
   const c = config.camera;
-  const targetX = car.x + car.vx * c.leadTime;
-  const targetY = car.y + car.vy * c.leadTime;
-  const k = smooth(c.followRate, dt);
-  cam.x += (targetX - cam.x) * k;
-  cam.y += (targetY - cam.y) * k;
-
   const ratio = Math.min(speed / config.physics.maxSpeed, 1);
-  const targetZoom = c.zoomRest + (c.zoomFast - c.zoomRest) * ratio;
-  cam.zoom += (targetZoom - cam.zoom) * smooth(c.zoomRate, dt);
+  const zoom = c.zoomRest + (c.zoomFast - c.zoomRest) * ratio;
+  moveCameraTo(cam, car.x + car.vx * c.leadTime, car.y + car.vy * c.leadTime, zoom, dt);
+}
+
+export interface Overview {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
+/** Camera target that fits the whole track on screen, for the game-over frame. */
+export function trackOverview(track: Track, viewWidth: number, viewHeight: number): Overview {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const p of track.points) {
+    minX = Math.min(minX, p.x);
+    minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x);
+    maxY = Math.max(maxY, p.y);
+  }
+  const pad = track.width;
+  const w = maxX - minX + pad * 2;
+  const h = maxY - minY + pad * 2;
+  const fill = config.camera.overviewFill;
+  const zoom = Math.min((viewWidth * fill) / w, (viewHeight * fill) / h);
+  // The world origin on screen sits at carScreenY, so offset the centre to land mid-screen
+  const screenCentreOffset = (config.render.carScreenY - 0.5) * viewHeight;
+  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 + screenCentreOffset / zoom, zoom };
 }
