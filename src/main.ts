@@ -36,6 +36,7 @@ import { fmtScore, Hud } from './render/hud';
 import { mountDebugPanel } from './debug/panel';
 import { debugState } from './debug/state';
 import { loadBest, saveBest } from './storage';
+import { AudioEngine } from './audio/audio';
 
 const canvasEl = document.getElementById('game');
 if (!(canvasEl instanceof HTMLCanvasElement)) {
@@ -47,6 +48,8 @@ const surface = new CanvasSurface(canvasEl);
 const { ctx, viewport } = surface;
 const input = new TouchControls(canvasEl);
 const hud = new Hud(document.body);
+const audio = new AudioEngine();
+hud.setSound(!audio.muted);
 
 const track = buildTrack({ ...CIRCUIT, width: config.track.width, scale: config.track.scale });
 const start = startPose(track);
@@ -63,6 +66,7 @@ let best = loadBest();
 let newBest = false;
 let countdownLeft = 0;
 let playTime = 0;
+let lastTick = 0;
 
 const skids = new SkidLayer(track);
 const smoke = new SmokePool(config.juice.smokeMax);
@@ -89,17 +93,26 @@ function resetRun(): void {
 }
 
 function setState(next: GameState): void {
+  const from = state;
   state = next;
   hud.show(next);
+  if (from === 'paused' && next !== 'paused') audio.resume();
   if (next === 'title') {
     resetRun();
     hud.setTitleBest(best);
+    audio.stopEngine();
   } else if (next === 'countdown') {
     resetRun();
     countdownLeft = config.scoring.countdownSeconds;
     hud.setCountdown(countdownLeft);
+    lastTick = Math.ceil(countdownLeft) + 1;
+    audio.unlock();
+    audio.startEngine();
+  } else if (next === 'paused') {
+    audio.suspend();
   } else if (next === 'gameover') {
     input.reset();
+    audio.stopEngine(1.2);
     newBest = score.score > best;
     if (newBest) {
       best = score.score;
@@ -110,8 +123,20 @@ function setState(next: GameState): void {
 }
 
 hud.onStart = () => {
+  audio.unlock();
   setState('countdown');
 };
+hud.onSound = () => {
+  audio.unlock();
+  hud.setSound(!audio.toggleMuted());
+};
+canvasEl.addEventListener(
+  'pointerdown',
+  () => {
+    audio.unlock();
+  },
+  { passive: true },
+);
 hud.onRestart = () => {
   setState('countdown');
 };
@@ -165,6 +190,14 @@ function stepPhysics(dt: number, ctl: InputState): void {
   updateLaps(laps, q.s, track.length, dt);
   const t = telemetry(car);
   layRubber(t.lateralSpeed, dt);
+  audio.update({
+    speedRatio: t.speed / config.physics.maxSpeed,
+    throttle: ctl.throttle,
+    drifting: car.drifting,
+    handbrake: ctl.handbrake,
+    slide: Math.min(1, Math.abs(t.lateralSpeed) / config.juice.fullIntensityLateral),
+    offTrack,
+  });
 
   if (state === 'playing') {
     updateScore(
@@ -225,6 +258,7 @@ function handleScoreEvents(): void {
     } else {
       popups.push(popup(`×${String(e.value)}`, cx + 70, cy - 40, config.palette.accent, 26));
       haptic(15);
+      audio.play('multiplier');
     }
   }
 }
@@ -242,6 +276,19 @@ function update(dt: number): void {
     case 'countdown': {
       countdownLeft -= dt;
       hud.setCountdown(countdownLeft);
+      const tick = Math.ceil(countdownLeft);
+      if (tick < lastTick) {
+        lastTick = tick;
+        audio.play(tick <= 0 ? 'go' : 'tick');
+      }
+      audio.update({
+        speedRatio: 0,
+        throttle: 0,
+        drifting: false,
+        handbrake: false,
+        slide: 0,
+        offTrack: false,
+      });
       Object.assign(prev, car);
       updateCamera(camera, car, 0, dt);
       if (countdownLeft <= -0.4) setState('playing');
@@ -345,8 +392,10 @@ const loop = new GameLoop({ update, render }, config.loop);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (state === 'playing') setState('paused');
+    audio.suspend();
     loop.stop();
   } else {
+    if (state !== 'paused') audio.resume();
     loop.start();
   }
 });
