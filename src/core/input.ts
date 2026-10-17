@@ -30,6 +30,9 @@ export class PointerInput {
   private pointerSteer = 0;
   private readonly keys = new Set<string>();
 
+  /** Called when a second finger touches while one is already down. */
+  onSecondPointer: (() => void) | null = null;
+
   constructor(private readonly target: HTMLElement) {
     target.addEventListener('pointerdown', this.onDown);
     target.addEventListener('pointermove', this.onMove);
@@ -53,7 +56,10 @@ export class PointerInput {
   }
 
   private readonly onDown = (e: PointerEvent): void => {
-    if (this.activePointer !== null) return;
+    if (this.activePointer !== null) {
+      this.onSecondPointer?.();
+      return;
+    }
     e.preventDefault();
     this.activePointer = e.pointerId;
     this.originX = e.clientX;
@@ -79,8 +85,15 @@ export class PointerInput {
     this.recompute();
   };
 
+  /** Called on Escape or P for desktop pause. */
+  onPauseKey: (() => void) | null = null;
+
   private readonly onKey = (e: KeyboardEvent): void => {
     const key = e.key.toLowerCase();
+    if (e.type === 'keydown' && (key === 'escape' || key === 'p')) {
+      this.onPauseKey?.();
+      return;
+    }
     if (!KEYS.has(key)) return;
     e.preventDefault();
     if (e.type === 'keydown') this.keys.add(key);
@@ -88,7 +101,8 @@ export class PointerInput {
     this.recompute();
   };
 
-  private readonly reset = (): void => {
+  /** Drop any held input, e.g. when leaving the playing state. */
+  readonly reset = (): void => {
     this.activePointer = null;
     this.pointerSteer = 0;
     this.keys.clear();
