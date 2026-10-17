@@ -1,44 +1,210 @@
+import './style.css';
 import { config } from './config';
 import { CanvasSurface } from './core/canvas';
 import { PointerInput } from './core/input';
 import { GameLoop } from './core/loop';
+import type { GameState } from './core/state';
+import { autopilot } from './game/autopilot';
 import { createCar, ROAD, stepCar, telemetry, type CarState, type Surface } from './game/car';
-import { buildTrack, CIRCUIT, isOffTrack, nearestOnTrack, startPose } from './game/track';
 import { createLapState, updateLaps } from './game/laps';
-import { createCamera, updateCamera } from './render/camera';
-import { beginWorld, drawCar, drawDebug, drawTrack, endWorld } from './render/draw';
+import { createScore, drainEvents, multiplierProgress, updateScore } from './game/scoring';
+import { buildTrack, CIRCUIT, isOffTrack, nearestOnTrack, startPose } from './game/track';
+import { createCamera, moveCameraTo, trackOverview, updateCamera } from './render/camera';
+import {
+  beginWorld,
+  drawCar,
+  drawChain,
+  drawDebug,
+  drawPopups,
+  drawTrack,
+  endWorld,
+  type Popup,
+} from './render/draw';
+import { fmtScore, Hud } from './render/hud';
 import { mountDebugPanel } from './debug/panel';
+import { debugState } from './debug/state';
+import { loadBest, saveBest } from './storage';
 
 const canvasEl = document.getElementById('game');
 if (!(canvasEl instanceof HTMLCanvasElement)) {
   throw new Error('#game canvas not found');
 }
 
+const debug = new URLSearchParams(location.search).has('debug');
 const surface = new CanvasSurface(canvasEl);
 const { ctx, viewport } = surface;
 const input = new PointerInput(canvasEl);
+const hud = new Hud(document.body);
 
 const track = buildTrack({ ...CIRCUIT, width: config.track.width, scale: config.track.scale });
 const start = startPose(track);
+const grass: Surface = config.offTrack;
+
+// Run state, rebuilt on every restart
 const car = createCar(start.x, start.y, start.heading);
 const prev: CarState = { ...car };
-const laps = createLapState();
+let laps = createLapState();
+let score = createScore();
 let offTrack = false;
-const grass: Surface = config.offTrack;
+let popups: Popup[] = [];
+let best = loadBest();
+let newBest = false;
+let countdownLeft = 0;
+
 const camera = createCamera(car);
+let state: GameState = 'title';
+
+function resetRun(): void {
+  Object.assign(car, createCar(start.x, start.y, start.heading));
+  Object.assign(prev, car);
+  laps = createLapState();
+  score = createScore();
+  offTrack = false;
+  popups = [];
+  newBest = false;
+  input.reset();
+}
+
+function setState(next: GameState): void {
+  state = next;
+  hud.show(next);
+  if (next === 'title') {
+    resetRun();
+    hud.setTitleBest(best);
+  } else if (next === 'countdown') {
+    resetRun();
+    countdownLeft = config.scoring.countdownSeconds;
+    hud.setCountdown(countdownLeft);
+  } else if (next === 'gameover') {
+    input.reset();
+    newBest = score.score > best;
+    if (newBest) {
+      best = score.score;
+      saveBest(best);
+    }
+    hud.setGameOver(score.score, best, newBest);
+  }
+}
+
+hud.onStart = () => {
+  setState('countdown');
+};
+hud.onRestart = () => {
+  setState('countdown');
+};
+hud.onResume = () => {
+  input.reset();
+  setState('playing');
+};
+hud.onShare = () => {
+  void share();
+};
+input.onSecondPointer = () => {
+  if (state === 'playing') setState('paused');
+};
+input.onPauseKey = () => {
+  if (state === 'playing') setState('paused');
+  else if (state === 'paused') hud.onResume?.();
+};
+
+async function share(): Promise<void> {
+  const text = `I scored ${fmtScore(score.score)} in Drifter. Can you beat it?`;
+  try {
+    const url = location.origin + location.pathname;
+    await navigator.share({ title: 'Drifter', text, url });
+  } catch {
+    // Cancelled or unsupported; nothing to do
+  }
+}
+
+// ---- Simulation -----------------------------------------------------------
+
+function stepPhysics(dt: number, steer: number, throttle: number): void {
+  Object.assign(prev, car);
+  stepCar(car, { steer, throttle }, dt, config.physics, offTrack ? grass : ROAD);
+  const q = nearestOnTrack(track, car.x, car.y);
+  offTrack = isOffTrack(track, q.distance);
+  const lapsBefore = laps.laps;
+  updateLaps(laps, q.s, track.length, dt);
+  const t = telemetry(car);
+
+  if (state === 'playing') {
+    updateScore(
+      score,
+      {
+        drifting: car.drifting,
+        offTrack,
+        slipAngle: t.slipAngle,
+        speed: t.speed,
+        lapCompleted: laps.laps > lapsBefore,
+      },
+      dt,
+    );
+    handleScoreEvents();
+    if (score.finished) setState('gameover');
+  }
+  updateCamera(camera, car, t.speed, dt);
+}
+
+function handleScoreEvents(): void {
+  const cx = viewport.width / 2;
+  const cy = viewport.height * config.render.carScreenY;
+  for (const e of drainEvents(score)) {
+    if (e.type === 'bank') {
+      popups.push(popup(`+${fmtScore(e.amount)}`, cx, cy - 70, config.palette.hudText, 34));
+    } else if (e.type === 'lost') {
+      popups.push(popup(`−${fmtScore(e.amount)}`, cx, cy - 70, 'rgba(242,238,230,0.5)', 22));
+    } else if (e.type === 'lap') {
+      popups.push(popup(`LAP +${fmtScore(e.bonus)}`, cx, cy - 110, config.palette.edgeLine, 22));
+    } else {
+      popups.push(popup(`×${String(e.value)}`, cx + 70, cy - 40, config.palette.accent, 26));
+    }
+  }
+}
+
+function popup(text: string, x: number, y: number, color: string, size: number): Popup {
+  return { text, x, y, age: 0, life: 1.1, color, size };
+}
+
+function update(dt: number): void {
+  switch (state) {
+    case 'title': {
+      const ai = autopilot(track, car);
+      stepPhysics(dt, ai.steer, ai.throttle);
+      break;
+    }
+    case 'countdown': {
+      countdownLeft -= dt;
+      hud.setCountdown(countdownLeft);
+      Object.assign(prev, car);
+      updateCamera(camera, car, 0, dt);
+      if (countdownLeft <= -0.4) setState('playing');
+      break;
+    }
+    case 'playing': {
+      const ctl = debugState.autopilot ? autopilot(track, car, debugState.aggression) : input.state;
+      stepPhysics(dt, ctl.steer, ctl.throttle);
+      break;
+    }
+    case 'paused': {
+      break;
+    }
+    case 'gameover': {
+      Object.assign(prev, car);
+      const o = trackOverview(track, viewport.width, viewport.height);
+      moveCameraTo(camera, o.x, o.y, o.zoom, dt);
+      break;
+    }
+  }
+  for (const p of popups) p.age += dt;
+  popups = popups.filter((p) => p.age < p.life);
+}
+
+// ---- Rendering ------------------------------------------------------------
 
 let frames = 0;
 let fpsWindowStart = performance.now();
 let fps = 0;
-
-function update(dt: number): void {
-  Object.assign(prev, car);
-  stepCar(car, input.state, dt, config.physics, offTrack ? grass : ROAD);
-  const q = nearestOnTrack(track, car.x, car.y);
-  offTrack = isOffTrack(track, q.distance);
-  updateLaps(laps, q.s, track.length, dt);
-  updateCamera(camera, car, telemetry(car).speed, dt);
-}
 
 function lerpAngle(a: number, b: number, t: number): number {
   let d = (b - a) % (Math.PI * 2);
@@ -61,25 +227,35 @@ function render(alpha: number): void {
   drawCar(ctx, x, y, heading);
   endWorld(ctx);
 
-  frames += 1;
-  const now = performance.now();
-  if (now - fpsWindowStart >= 1000) {
-    fps = frames;
-    frames = 0;
-    fpsWindowStart = now;
+  if (state === 'playing') {
+    const sx = width / 2 + (x - camera.x) * camera.zoom;
+    const sy = height * config.render.carScreenY + (y - camera.y) * camera.zoom;
+    drawChain(ctx, sx, sy - 44, score.chain, score.multiplier);
+    hud.setPlaying(score.score, score.timeLeft, score.multiplier, multiplierProgress(score));
   }
-  drawDebug(
-    ctx,
-    viewport,
-    car,
-    telemetry(car),
-    laps,
-    offTrack,
-    fps,
-    input.state.steer,
-    input.state.throttle,
-    safeAreaTop(),
-  );
+  drawPopups(ctx, popups);
+
+  if (debug) {
+    frames += 1;
+    const now = performance.now();
+    if (now - fpsWindowStart >= 1000) {
+      fps = frames;
+      frames = 0;
+      fpsWindowStart = now;
+    }
+    drawDebug(
+      ctx,
+      viewport,
+      car,
+      telemetry(car),
+      laps,
+      offTrack,
+      fps,
+      input.state.steer,
+      input.state.throttle,
+      safeAreaTop() + 70,
+    );
+  }
 }
 
 function safeAreaTop(): number {
@@ -88,15 +264,19 @@ function safeAreaTop(): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+// ---- Boot -----------------------------------------------------------------
+
 const loop = new GameLoop({ update, render }, config.loop);
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) loop.stop();
-  else loop.start();
+  if (document.hidden) {
+    if (state === 'playing') setState('paused');
+    loop.stop();
+  } else {
+    loop.start();
+  }
 });
 
-if (new URLSearchParams(location.search).has('debug')) {
-  mountDebugPanel();
-}
-
+if (debug) mountDebugPanel();
+setState('title');
 loop.start();
