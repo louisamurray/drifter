@@ -31,14 +31,17 @@ export class Hud {
   onResume: (() => void) | null = null;
   onShare: (() => void) | null = null;
   onPause: (() => void) | null = null;
+  onSound: (() => void) | null = null;
+  private readonly soundButtons: HTMLElement[] = [];
 
   constructor(parent: HTMLElement) {
     this.root = el('div', 'hud');
     parent.append(this.root);
 
     // Title
-    const title = el('button', 'screen screen-title');
+    const title = el('div', 'screen screen-title');
     title.innerHTML = `
+      <button class="sound-toggle" data-act="sound" aria-label="Sound">sound on</button>
       <div class="title-logo">DRIFTER</div>
       <div class="hint">
         <div class="hint-thumb hint-left"><span>hold</span></div>
@@ -47,9 +50,11 @@ export class Hud {
       <div class="title-cta">Tap to drive</div>
       <div class="title-sub">Hold a side to steer. Both for handbrake.</div>
       <div class="title-best"></div>`;
-    title.addEventListener('click', () => {
+    title.addEventListener('click', (e) => {
+      if (this.dispatch(e)) return;
       this.onStart?.();
     });
+    this.soundButtons.push(must(title.querySelector('.sound-toggle')));
     this.titleBestEl = must(title.querySelector('.title-best'));
     this.screens.set('title', title);
 
@@ -94,10 +99,12 @@ export class Hud {
         <div class="panel-title">Paused</div>
         <button class="btn btn-primary" data-act="resume">Resume</button>
         <button class="btn" data-act="restart">Restart</button>
+        <button class="btn btn-quiet" data-act="sound">sound on</button>
       </div>`;
     paused.addEventListener('click', (e) => {
       this.dispatch(e);
     });
+    this.soundButtons.push(must(paused.querySelector('[data-act="sound"]')));
     this.screens.set('paused', paused);
 
     // Game over
@@ -125,14 +132,25 @@ export class Hud {
     for (const s of this.screens.values()) this.root.append(s);
   }
 
-  private dispatch(e: Event): void {
+  /** Route a click to its action. Returns true if a button handled it. */
+  private dispatch(e: Event): boolean {
     const target = e.target;
-    if (!(target instanceof HTMLElement)) return;
+    if (!(target instanceof HTMLElement)) return false;
     const act = target.closest<HTMLElement>('[data-act]')?.dataset.act;
     if (act === 'resume') this.onResume?.();
     else if (act === 'restart') this.onRestart?.();
     else if (act === 'share') this.onShare?.();
     else if (act === 'pause') this.onPause?.();
+    else if (act === 'sound') this.onSound?.();
+    else return false;
+    return true;
+  }
+
+  setSound(on: boolean): void {
+    for (const b of this.soundButtons) {
+      b.textContent = on ? 'sound on' : 'sound off';
+      b.classList.toggle('off', !on);
+    }
   }
 
   show(state: GameState): void {
