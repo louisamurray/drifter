@@ -235,7 +235,7 @@ function render(alpha: number): void {
   }
   drawPopups(ctx, popups);
 
-  if (debug) {
+  if (debug && state !== 'gameover') {
     frames += 1;
     const now = performance.now();
     if (now - fpsWindowStart >= 1000) {
