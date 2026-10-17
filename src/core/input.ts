@@ -42,18 +42,27 @@ export function resolveControls(
   return { steer, handbrake: keyBrake };
 }
 
-/** Move `current` towards `target` so that a full swing takes `rampSeconds`. */
-export function rampSteer(
-  current: number,
-  target: number,
-  dt: number,
-  rampSeconds: number,
-): number {
-  if (rampSeconds <= 0) return target;
-  const step = dt / rampSeconds;
-  if (target > current) return Math.min(target, current + step);
-  if (target < current) return Math.max(target, current - step);
-  return current;
+export interface SteerRamp {
+  stage1: number;
+  stage1Seconds: number;
+  stage2Seconds: number;
+  releaseSeconds: number;
+}
+
+/**
+ * Two-stage steering ramp. Towards centre, or across it, moves at the release
+ * rate. Away from centre, the first stage reaches `stage1` in `stage1Seconds`
+ * and the second continues to full lock over `stage2Seconds`.
+ */
+export function rampSteer(current: number, target: number, dt: number, r: SteerRamp): number {
+  const crossing = current !== 0 && Math.sign(target) !== Math.sign(current);
+  if (target === 0 || crossing) {
+    const step = dt / r.releaseSeconds;
+    return current > 0 ? Math.max(0, current - step) : Math.min(0, current + step);
+  }
+  const mag = Math.abs(current);
+  const rate = mag < r.stage1 ? r.stage1 / r.stage1Seconds : (1 - r.stage1) / r.stage2Seconds;
+  return Math.sign(target) * Math.min(1, mag + rate * dt);
 }
 
 export class TouchControls {
@@ -102,9 +111,9 @@ export class TouchControls {
    * Advance the smoothed state by one physics step. Throttle is automatic:
    * full unless the handbrake is held.
    */
-  sample(dt: number, rampSeconds: number): InputState {
+  sample(dt: number, ramp: SteerRamp): InputState {
     const r = this.raw();
-    this.state.steer = rampSteer(this.state.steer, r.steer, dt, rampSeconds);
+    this.state.steer = rampSteer(this.state.steer, r.steer, dt, ramp);
     this.state.handbrake = r.handbrake;
     this.state.throttle = r.handbrake ? 0 : 1;
     this.held.left = [...this.pointers.values()].includes('left');

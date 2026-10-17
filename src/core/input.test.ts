@@ -33,18 +33,31 @@ describe('resolveControls', () => {
   });
 });
 
+const ramp = { stage1: 0.5, stage1Seconds: 0.3, stage2Seconds: 0.5, releaseSeconds: 0.1 };
+const dt = 1 / 60;
+
+function hold(from: number, target: number, seconds: number): number {
+  let s = from;
+  for (let i = 0; i < Math.round(seconds * 60); i++) s = rampSteer(s, target, dt, ramp);
+  return s;
+}
+
 describe('rampSteer', () => {
-  it('reaches full lock in the ramp time and not before', () => {
-    let s = 0;
-    for (let i = 0; i < 5; i++) s = rampSteer(s, 1, 1 / 60, 0.1);
-    expect(s).toBeCloseTo(5 / 6);
-    s = rampSteer(s, 1, 1 / 60, 0.1);
-    expect(s).toBeCloseTo(1);
+  it('reaches the grip stage first and full lock only on a longer hold', () => {
+    expect(hold(0, 1, 0.3)).toBeCloseTo(0.5, 2);
+    expect(hold(0, 1, 0.5)).toBeLessThan(0.75);
+    expect(hold(0, 1, 0.8)).toBeCloseTo(1, 2);
+    expect(hold(0, 1, 2)).toBe(1);
   });
 
-  it('swings through centre when the side changes', () => {
-    let s = 1;
-    for (let i = 0; i < 6; i++) s = rampSteer(s, -1, 1 / 60, 0.1);
-    expect(s).toBeCloseTo(0);
+  it('releases to centre quickly', () => {
+    expect(hold(1, 0, 0.1)).toBeCloseTo(0, 2);
+    expect(hold(-0.5, 0, 0.05)).toBeCloseTo(0, 2);
+  });
+
+  it('crosses centre at the release rate before ramping the other way', () => {
+    const mid = hold(1, -1, 0.1);
+    expect(mid).toBeCloseTo(0, 2);
+    expect(hold(1, -1, 0.4)).toBeCloseTo(-0.5, 1);
   });
 });
