@@ -1,3 +1,4 @@
+import { claimPlaybackSession, pausePlaybackSession, resumePlaybackSession } from './session';
 import {
   bankRootHz,
   engineCutoff,
@@ -55,9 +56,19 @@ export class AudioEngine {
       if (!Ctor) return;
       this.ctx = new Ctor();
       this.buildGraph(this.ctx);
+      claimPlaybackSession();
     }
-    if (this.ctx.state !== 'running') void this.ctx.resume();
+    if (this.ctx.state !== 'running') {
+      void this.ctx.resume();
+      resumePlaybackSession();
+    }
     this.applyMute();
+  }
+
+  /** One line of state for the debug readout. */
+  describe(): string {
+    if (!this.ctx) return 'audio: not unlocked';
+    return `audio: ${this.ctx.state} ${String(this.ctx.sampleRate)}Hz${this._muted ? ' muted' : ''}`;
   }
 
   setMuted(muted: boolean): void {
@@ -92,10 +103,12 @@ export class AudioEngine {
   /** Suspend the whole context, e.g. on pause or when the tab is hidden. */
   suspend(): void {
     if (this.ctx?.state === 'running') void this.ctx.suspend();
+    pausePlaybackSession();
   }
 
   resume(): void {
     if (this.ctx && this.ctx.state !== 'running') void this.ctx.resume();
+    if (this.ctx) resumePlaybackSession();
   }
 
   /** Call once per physics step while the engine is on. */
