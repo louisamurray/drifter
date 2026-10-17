@@ -120,8 +120,8 @@ No logo over a static scene. Show the empty track with a ghost car doing one slo
 ### 3.9 Audio
 One engine loop pitched by speed, a tyre squeal loop gained by drift angle, and three short SFX (chain bank, multiplier up, countdown). Web Audio API, unlocked on first touch. Muted by default until the player taps the sound toggle or starts a run (iOS autoplay rules).
 
-### 3.10 Open question and device checks
-- **Tone assumption:** this direction assumes cold and precise (time-attack) rather than warm and toy-like. If the toy feel is wanted, move to a chunkier car, a brighter off-track and a softer accent; the concept still holds.
+### 3.10 Tone and device checks
+- **Tone (decided):** cold and precise, time-attack. Restrained palette, single hot accent, hard snaps over soft fades, no toy-like chunkiness. Every later visual choice is tested against this.
 - Cannot be judged from a screenshot: legibility in sunlight, the olive on a dim OLED, and whether 36px is too small on a 6.7-inch phone at arm's length. Check on two real phones outdoors during milestone 4.
 
 ---
