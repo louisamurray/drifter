@@ -29,14 +29,15 @@ A simple, satisfying car-drifting game for mobile browsers. Top-down, one-thumb 
 ### 2.2 Controls (mobile first)
 | Input | Action |
 |---|---|
-| Touch anywhere | Throttle on (car accelerates while held) |
-| Drag left / right from touch origin | Steer, proportional to horizontal drag distance (dead zone 8px, full lock at 60px) |
-| Release | Throttle off, coast, steering returns to centre |
-| Two-finger tap | Pause |
+| Hold left half of screen | Steer left, full lock (ramps in over 0.1 s) |
+| Hold right half of screen | Steer right, full lock |
+| Hold both | Handbrake: grip drops, speed scrubs, rear steps out. Steer stays with the side pressed first |
+| No touch | Straighten. The car accelerates by itself at all times |
+| Pause button under the timer | Pause |
 
-Desktop fallback for development and testing: arrow keys or WASD, Space for handbrake-style kick (not exposed on mobile in v1).
+Desktop fallback for development and testing: arrow keys or A/D steer, Space or Down is the handbrake, Escape or P pauses.
 
-Rationale: the drag-to-steer model keeps the thumb in one place, works for left or right handed players, and gives analogue steering without a visible joystick.
+Rationale: the physics decides the slide angle, so the player's only decisions are when to start sliding and when to stop. Binary hold controls make those decisions legible through the thumb, need no invisible centre point, and work one-handed (alternate sides) or two-handed (one thumb per side, handbrake by adding the second). An earlier drag-to-steer scheme was built and rejected: its centre was wherever the thumb first landed, steer and throttle were welded together, and full lock arrived within a few millimetres of travel.
 
 ### 2.3 Car physics (arcade, not simulation)
 Simple velocity-based model, tuned by feel:
@@ -57,6 +58,8 @@ Tunables live in one config object so tuning is a one-file job: `maxSpeed`, `acc
 ### 2.5 Scoring
 - Points accrue each frame while drifting: `points += driftAngle × speed × dt × multiplier`.
 - **Multiplier** rises by 0.5 every 2 seconds of continuous drift, capped at ×5. Resets to ×1 after 1 second with no drift or when off-track.
+- **Running wide** ends the chain: half of it banks, the other half is lost along with the multiplier. Harsh enough to matter, not so harsh that one clipped kerb erases a run.
+- **Handbrake** drifts score at 35% rate. It starts chains and sets up corners, it is not a free points button.
 - A drift "chain" banks when it ends. Chain score pops up with a short animation. Lap completion adds a flat bonus.
 - Run ends when a 60-second timer hits zero. Final score compared against local best.
 
@@ -65,7 +68,7 @@ Tunables live in one config object so tuning is a one-file job: `maxSpeed`, `acc
 2. **Countdown** — 3-2-1 overlaid on the track, car static.
 3. **Playing** — HUD: timer (top centre), score (top left), multiplier badge (top right, pulses when it increases), current chain score floating near the car.
 4. **Game over** — camera zooms out to show the whole track with the player's rubber on it, then final score, best score, "new best" callout, Restart button (large, bottom), Share button (Web Share API sending the zoomed-out frame as an image plus score text).
-5. **Pause** — resume / restart / sound.
+5. **Pause** — resume / restart / sound. Reached from the small button under the timer.
 
 ---
 
