@@ -29,10 +29,10 @@ A simple, satisfying car-drifting game for mobile browsers. Top-down, one-thumb 
 ### 2.2 Controls (mobile first)
 | Input | Action |
 |---|---|
-| Hold left half of screen | Steer left, full lock (ramps in over 0.1 s) |
-| Hold right half of screen | Steer right, full lock |
+| Hold left half of screen | Steer left. Two stages: half lock within 0.3 s (a grip turn), full lock after a further 0.5 s (the drift). Tap to correct, hold to commit |
+| Hold right half of screen | Steer right, same two stages |
 | Hold both | Handbrake: grip drops, speed scrubs, rear steps out. Steer stays with the side pressed first |
-| No touch | Straighten. The car accelerates by itself at all times |
+| No touch | Straighten. On asphalt the car also eases its nose toward the road direction (road assist), weaker mid-slide, off on grass. The car accelerates by itself at all times |
 | Pause button under the timer | Pause |
 
 Desktop fallback for development and testing: arrow keys or A/D steer, Space or Down is the handbrake, Escape or P pauses.
@@ -47,11 +47,15 @@ Simple velocity-based model, tuned by feel:
 - Forward drag and max speed cap. Reverse not needed.
 - Steering authority scales with speed (no steering when stationary, reduced at very high speed).
 - **Drift state** = lateral speed above a threshold AND forward speed above a minimum. Entering drift slightly boosts angular response so holding the slide feels intentional.
+- **Long holds slow the car.** In the second steering stage throttle is cut by up to half, so a committed slide tightens and sheds speed. This is what makes every corner makeable without the handbrake.
+- **Road assist.** With no side held and the car on asphalt, yaw eases toward the road tangent (gain-limited). Half strength while drifting, zero on grass. It is the thing that makes releasing the thumb safe.
+- **Tuned against drivers, not feelings.** A naive thumb model (150 ms reaction, holds a side when pointed off the line, never brakes) and a cautious autopilot both run in the test suite. Changes that push the naive driver's off-track time up are rejected.
 
 Tunables live in one config object so tuning is a one-file job: `maxSpeed`, `accel`, `drag`, `gripNormal`, `gripDrift`, `steerRate`, `driftThreshold`.
 
 ### 2.4 Track & collisions
 - Track defined as a polyline centreline plus width. Rendered as asphalt on grass with painted edges.
+- No centreline radius tighter than about 95 world units against a 65 half-width. The first circuit had a 44-radius S apex and a 76-radius hairpin, which no auto-throttle car could take, and was redrawn.
 - Off-track detection by distance from centreline. Off-track = heavy drag and grip penalty, no hard walls (hard walls on mobile feel punishing). Drift chain breaks when off-track.
 - Rumble strips on the outside of the two hardest corners as the only visual guide (see section 3.6). No barriers or props.
 
