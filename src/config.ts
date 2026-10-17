@@ -36,11 +36,11 @@ export const config = {
     /** Fraction of grip lost at full steer and full speed. Lets the car break loose. */
     steerGripLoss: 0.6,
     /** Peak yaw rate (rad/s) at full steer. */
-    steerRate: 2.4,
+    steerRate: 2.8,
     /** Forward speed at which steering has full authority. */
     steerFullSpeed: 140,
     /** Yaw rate reduction at max speed (0 none, 1 no steering at top speed). */
-    highSpeedSteerLoss: 0.3,
+    highSpeedSteerLoss: 0.4,
     /** Yaw multiplier while drifting so holding the slide feels intentional. */
     driftYawBoost: 1.15,
     /** Throttle multiplier while drifting. Offsets the speed a slide scrubs off. */
@@ -51,6 +51,18 @@ export const config = {
     driftExitLateral: 35,
     /** Minimum forward speed for a drift to count. */
     driftMinForward: 110,
+  },
+  track: {
+    /** Road width in world px. */
+    width: 130,
+    /** Scale applied to the track's control points. */
+    scale: 1,
+  },
+  offTrack: {
+    /** Multipliers applied to physics while off the road. */
+    accel: 0.5,
+    drag: 2.5,
+    grip: 0.6,
   },
   camera: {
     /** Seconds of velocity to lead the car by. */
@@ -71,6 +83,9 @@ export const config = {
     skid: 'rgba(12, 10, 8, 0.7)',
     accent: '#ff5a2d',
     hudText: '#f2eee6',
+    carBody: '#e8dcc4',
+    carRoof: '#fffaf0',
+    carWheel: '#0d1016',
   },
 };
 
