@@ -56,6 +56,8 @@ export function stepCar(
   dt: number,
   p: PhysicsConfig,
   surface: Surface = ROAD,
+  /** Extra yaw (rad/s) from road assist. Applied only when the player is not steering. */
+  assistYaw = 0,
 ): CarState {
   // Decompose in the current heading frame
   let fx = Math.cos(car.heading);
@@ -73,7 +75,9 @@ export function stepCar(
 
   // Longitudinal
   const accel = (car.drifting ? p.accel * p.driftAccelBoost : p.accel) * surface.accel;
-  vF += accel * input.throttle * dt;
+  const turn = Math.max(0, Math.abs(input.steer) - p.turnThrottleFrom) / (1 - p.turnThrottleFrom);
+  const throttle = input.throttle * (1 - p.turnThrottleCut * Math.min(1, turn));
+  vF += accel * throttle * dt;
   const drag = p.drag * surface.drag + (input.handbrake ? p.handbrakeDrag : 0);
   vF -= drag * vF * dt;
   if (input.throttle === 0) {
@@ -88,6 +92,7 @@ export function stepCar(
   const authority = Math.min(vF / p.steerFullSpeed, 1) * (1 - p.highSpeedSteerLoss * speedRatio);
   let yawRate = input.steer * p.steerRate * authority;
   if (car.drifting) yawRate *= p.driftYawBoost;
+  if (Math.abs(input.steer) < 0.05) yawRate += assistYaw * Math.min(1, vF / p.steerFullSpeed);
   const wx = fx * vF + -fy * vL;
   const wy = fy * vF + fx * vL;
   car.heading += yawRate * dt;
@@ -110,4 +115,29 @@ export function stepCar(
   car.y += car.vy * dt;
 
   return car;
+}
+
+/** Shortest signed angle from `a` to `b`. */
+export function angleDelta(a: number, b: number): number {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
+/**
+ * Road assist yaw towards the road direction. Zero off the road, so the grass
+ * still punishes, and softer mid-drift so a slide exits on the player's terms.
+ */
+export function assistYaw(
+  heading: number,
+  roadHeading: number,
+  drifting: boolean,
+  offTrack: boolean,
+  p: PhysicsConfig,
+): number {
+  if (offTrack) return 0;
+  const err = angleDelta(heading, roadHeading);
+  const yaw = Math.max(-p.assistMaxYaw, Math.min(p.assistMaxYaw, err * p.assistGain));
+  return drifting ? yaw * p.assistDriftScale : yaw;
 }
