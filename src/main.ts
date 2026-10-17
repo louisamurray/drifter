@@ -7,6 +7,13 @@ import type { GameState } from './core/state';
 import { autopilot } from './game/autopilot';
 import { createCar, ROAD, stepCar, telemetry, type CarState, type Surface } from './game/car';
 import { createLapState, updateLaps } from './game/laps';
+import {
+  bankShakeAmplitude,
+  createShake,
+  SmokePool,
+  triggerShake,
+  updateShake,
+} from './game/particles';
 import { createScore, drainEvents, multiplierProgress, updateScore } from './game/scoring';
 import { buildTrack, CIRCUIT, isOffTrack, nearestOnTrack, startPose } from './game/track';
 import { createCamera, moveCameraTo, trackOverview, updateCamera } from './render/camera';
@@ -16,10 +23,14 @@ import {
   drawChain,
   drawDebug,
   drawPopups,
+  drawSmoke,
   drawTrack,
   endWorld,
+  rearWheels,
   type Popup,
 } from './render/draw';
+import { SkidLayer } from './render/skids';
+import { haptic } from './core/haptics';
 import { fmtScore, Hud } from './render/hud';
 import { mountDebugPanel } from './debug/panel';
 import { debugState } from './debug/state';
@@ -51,6 +62,11 @@ let best = loadBest();
 let newBest = false;
 let countdownLeft = 0;
 
+const skids = new SkidLayer(track);
+const smoke = new SmokePool(config.juice.smokeMax);
+const shake = createShake();
+let everDrifted = false;
+
 const camera = createCamera(car);
 let state: GameState = 'title';
 
@@ -62,6 +78,9 @@ function resetRun(): void {
   offTrack = false;
   popups = [];
   newBest = false;
+  everDrifted = false;
+  skids.clear();
+  smoke.clear();
   input.reset();
 }
 
@@ -109,12 +128,26 @@ input.onPauseKey = () => {
 
 async function share(): Promise<void> {
   const text = `I scored ${fmtScore(score.score)} in Drifter. Can you beat it?`;
+  const url = location.origin + location.pathname;
   try {
-    const url = location.origin + location.pathname;
+    const file = await captureFrame();
+    if (file && navigator.canShare({ files: [file] })) {
+      await navigator.share({ title: 'Drifter', text, files: [file] });
+      return;
+    }
     await navigator.share({ title: 'Drifter', text, url });
   } catch {
     // Cancelled or unsupported; nothing to do
   }
+}
+
+/** The game-over overview, with the run's rubber on it, as a PNG. */
+function captureFrame(): Promise<File | null> {
+  return new Promise((resolve) => {
+    surface.canvas.toBlob((blob) => {
+      resolve(blob ? new File([blob], 'drifter.png', { type: 'image/png' }) : null);
+    }, 'image/png');
+  });
 }
 
 // ---- Simulation -----------------------------------------------------------
@@ -127,6 +160,7 @@ function stepPhysics(dt: number, steer: number, throttle: number): void {
   const lapsBefore = laps.laps;
   updateLaps(laps, q.s, track.length, dt);
   const t = telemetry(car);
+  layRubber(t.lateralSpeed, dt);
 
   if (state === 'playing') {
     updateScore(
@@ -146,18 +180,44 @@ function stepPhysics(dt: number, steer: number, throttle: number): void {
   updateCamera(camera, car, t.speed, dt);
 }
 
+/** Skid marks and smoke from the rear wheels, scaled by how hard the car is sliding. */
+function layRubber(lateralSpeed: number, dt: number): void {
+  const intensity = Math.min(1, Math.abs(lateralSpeed) / config.juice.fullIntensityLateral);
+  if (!car.drifting || offTrack) return;
+  if (!everDrifted) {
+    everDrifted = true;
+    if (state === 'playing') haptic(10);
+  }
+  const [ax, ay, bx, by] = rearWheels(car.x, car.y, car.heading);
+  const [pax, pay, pbx, pby] = rearWheels(prev.x, prev.y, prev.heading);
+  skids.mark(pax, pay, ax, ay, intensity);
+  skids.mark(pbx, pby, bx, by, intensity);
+  const heat = Math.min(1, Math.abs(telemetry(car).slipAngle) / 0.8);
+  const rate = config.juice.smokeRate * intensity;
+  smoke.emit(ax, ay, car.vx, car.vy, rate, dt, heat);
+  smoke.emit(bx, by, car.vx, car.vy, rate, dt, heat);
+}
+
 function handleScoreEvents(): void {
   const cx = viewport.width / 2;
   const cy = viewport.height * config.render.carScreenY;
   for (const e of drainEvents(score)) {
     if (e.type === 'bank') {
       popups.push(popup(`+${fmtScore(e.amount)}`, cx, cy - 70, config.palette.hudText, 34));
+      const j = config.juice;
+      triggerShake(
+        shake,
+        bankShakeAmplitude(e.amount, j.shakeBase, j.shakePerDecade, j.shakeMax),
+        j.shakeDuration,
+      );
+      haptic(20);
     } else if (e.type === 'lost') {
       popups.push(popup(`−${fmtScore(e.amount)}`, cx, cy - 70, 'rgba(242,238,230,0.5)', 22));
     } else if (e.type === 'lap') {
       popups.push(popup(`LAP +${fmtScore(e.bonus)}`, cx, cy - 110, config.palette.edgeLine, 22));
     } else {
       popups.push(popup(`×${String(e.value)}`, cx + 70, cy - 40, config.palette.accent, 26));
+      haptic(15);
     }
   }
 }
@@ -198,6 +258,8 @@ function update(dt: number): void {
   }
   for (const p of popups) p.age += dt;
   popups = popups.filter((p) => p.age < p.life);
+  smoke.update(dt);
+  updateShake(shake, dt);
 }
 
 // ---- Rendering ------------------------------------------------------------
@@ -222,8 +284,10 @@ function render(alpha: number): void {
   const y = prev.y + (car.y - prev.y) * alpha;
   const heading = lerpAngle(prev.heading, car.heading, alpha);
 
-  beginWorld(ctx, viewport, camera);
+  beginWorld(ctx, viewport, camera, shake);
   drawTrack(ctx, track);
+  skids.draw(ctx);
+  drawSmoke(ctx, smoke);
   drawCar(ctx, x, y, heading);
   endWorld(ctx);
 
