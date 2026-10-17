@@ -2,12 +2,23 @@ import { config } from '../config';
 import type { CarState, CarTelemetry } from '../game/car';
 import type { Track } from '../game/track';
 import type { LapState } from '../game/laps';
+import type { Shake, SmokePool } from '../game/particles';
 import type { Camera } from './camera';
 import type { Viewport } from '../core/canvas';
 
-export function beginWorld(ctx: CanvasRenderingContext2D, vp: Viewport, cam: Camera): void {
+const UI_FONT = "'Archivo', ui-sans-serif, system-ui, sans-serif";
+
+export function beginWorld(
+  ctx: CanvasRenderingContext2D,
+  vp: Viewport,
+  cam: Camera,
+  shake?: Shake,
+): void {
   ctx.save();
-  ctx.translate(vp.width / 2, vp.height * config.render.carScreenY);
+  ctx.translate(
+    vp.width / 2 + (shake?.x ?? 0),
+    vp.height * config.render.carScreenY + (shake?.y ?? 0),
+  );
   ctx.scale(cam.zoom, cam.zoom);
   ctx.translate(-cam.x, -cam.y);
 }
@@ -110,9 +121,12 @@ export function drawCar(
   ctx.fillRect(-CAR_LENGTH * 0.42, -CAR_WIDTH * 0.62, 9, CAR_WIDTH * 1.24);
   ctx.fillRect(CAR_LENGTH * 0.18, -CAR_WIDTH * 0.52, 8, CAR_WIDTH * 1.04);
 
-  // Body
+  // Body with a dark outline so it reads against the cream edge lines
   ctx.fillStyle = config.palette.carBody;
   ctx.fillRect(-CAR_LENGTH / 2, -CAR_WIDTH / 2, CAR_LENGTH, CAR_WIDTH);
+  ctx.strokeStyle = config.palette.carOutline;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(-CAR_LENGTH / 2, -CAR_WIDTH / 2, CAR_LENGTH, CAR_WIDTH);
 
   // Roof, lighter and forward of centre so heading is unambiguous
   ctx.fillStyle = config.palette.carRoof;
@@ -174,7 +188,7 @@ export function drawPopups(ctx: CanvasRenderingContext2D, popups: Popup[]): void
     const scale = t < 0.15 ? 1 + (0.15 - t) * 3 : 1;
     ctx.globalAlpha = Math.max(0, alpha);
     ctx.fillStyle = p.color;
-    ctx.font = `800 ${String(Math.round(p.size * scale))}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.font = `800 ${String(Math.round(p.size * scale))}px ${UI_FONT}`;
     ctx.fillText(p.text, p.x, p.y - rise);
   }
   ctx.globalAlpha = 1;
@@ -194,7 +208,42 @@ export function drawChain(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = multiplier > 1 ? config.palette.accent : config.palette.hudText;
-  ctx.font = `800 ${String(Math.round(size))}px ui-sans-serif, system-ui, sans-serif`;
+  ctx.font = `800 ${String(Math.round(size))}px ${UI_FONT}`;
   ctx.fillText(`+${String(Math.round(chain))}`, x, y);
   ctx.textAlign = 'start';
+}
+
+/** Rear-wheel contact points in world space for a car pose. */
+export function rearWheels(
+  x: number,
+  y: number,
+  heading: number,
+): [number, number, number, number] {
+  const c = Math.cos(heading);
+  const s = Math.sin(heading);
+  const back = -CAR_LENGTH * 0.38;
+  const half = CAR_WIDTH * 0.55;
+  return [
+    x + c * back - s * -half,
+    y + s * back + c * -half,
+    x + c * back - s * half,
+    y + s * back + c * half,
+  ];
+}
+
+/** Smoke puffs in world space. Grow and fade; hotter drifts tint towards the accent. */
+export function drawSmoke(ctx: CanvasRenderingContext2D, pool: SmokePool): void {
+  for (const p of pool.items) {
+    if (!p.alive) continue;
+    const t = p.age / p.life;
+    const size = p.size + t * 16;
+    const alpha = 0.32 * (1 - t) * (1 - t);
+    const r = 210 + (255 - 210) * p.heat * 0.6;
+    const g = 205 - (205 - 90) * p.heat * 0.6;
+    const b = 195 - (195 - 45) * p.heat * 0.6;
+    ctx.fillStyle = `rgba(${String(Math.round(r))}, ${String(Math.round(g))}, ${String(Math.round(b))}, ${alpha.toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
