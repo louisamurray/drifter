@@ -146,6 +146,7 @@ export function drawDebug(
   steer: number,
   throttle: number,
   safeTop: number,
+  extra = '',
 ): void {
   const lines = [
     `${String(fps)} fps  ${String(vp.width)}x${String(vp.height)} @${String(vp.dpr)}x`,
@@ -153,6 +154,7 @@ export function drawDebug(
     `slip ${((t.slipAngle * 180) / Math.PI).toFixed(0)}°  ${car.drifting ? 'DRIFT' : ''}`,
     `steer ${steer.toFixed(2)}  throttle ${String(throttle)}${offTrack ? '  OFF TRACK' : ''}`,
     `lap ${String(laps.laps)}  ${fmt(laps.lapTime)}  best ${laps.bestLap === null ? '--' : fmt(laps.bestLap)}`,
+    extra,
   ];
   ctx.fillStyle = car.drifting ? config.palette.accent : config.palette.hudText;
   ctx.font = '600 14px ui-monospace, Menlo, monospace';

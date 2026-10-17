@@ -39,7 +39,7 @@ import {
   type Popup,
 } from './render/draw';
 import { SkidLayer } from './render/skids';
-import { haptic } from './core/haptics';
+import { haptic, hapticsDescription } from './core/haptics';
 import { fmtScore, Hud } from './render/hud';
 import { mountDebugPanel } from './debug/panel';
 import { debugState } from './debug/state';
@@ -140,13 +140,16 @@ hud.onSound = () => {
   audio.unlock();
   hud.setSound(!audio.toggleMuted());
 };
-canvasEl.addEventListener(
-  'pointerdown',
-  () => {
-    audio.unlock();
-  },
-  { passive: true },
-);
+// Unlock on both ends of a touch: older iOS only honours the release
+for (const type of ['pointerdown', 'pointerup', 'touchend'] as const) {
+  canvasEl.addEventListener(
+    type,
+    () => {
+      audio.unlock();
+    },
+    { passive: true },
+  );
+}
 hud.onRestart = () => {
   setState('countdown');
 };
@@ -388,6 +391,7 @@ function render(alpha: number): void {
       input.state.steer,
       input.state.throttle,
       safeAreaTop() + 70,
+      `${audio.describe()}  haptics: ${hapticsDescription()}`,
     );
   }
 }
