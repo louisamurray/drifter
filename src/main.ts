@@ -1,6 +1,11 @@
 import { config } from './config';
 import { CanvasSurface } from './core/canvas';
+import { PointerInput } from './core/input';
 import { GameLoop } from './core/loop';
+import { createCar, stepCar, telemetry, type CarState } from './game/car';
+import { createCamera, updateCamera } from './render/camera';
+import { beginWorld, drawCar, drawDebug, drawField, endWorld } from './render/draw';
+import { mountDebugPanel } from './debug/panel';
 
 const canvasEl = document.getElementById('game');
 if (!(canvasEl instanceof HTMLCanvasElement)) {
@@ -9,34 +14,42 @@ if (!(canvasEl instanceof HTMLCanvasElement)) {
 
 const surface = new CanvasSurface(canvasEl);
 const { ctx, viewport } = surface;
+const input = new PointerInput(canvasEl);
 
-// Milestone 0 scene: a square orbiting the centre, so frame pacing is visible.
-let angle = 0;
+const car = createCar();
+const prev: CarState = { ...car };
+const camera = createCamera(car);
+
 let frames = 0;
 let fpsWindowStart = performance.now();
 let fps = 0;
 
 function update(dt: number): void {
-  angle += dt * 1.5;
+  Object.assign(prev, car);
+  stepCar(car, input.state, dt, config.physics);
+  updateCamera(camera, car, telemetry(car).speed, dt);
 }
 
-function render(): void {
+function lerpAngle(a: number, b: number, t: number): number {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return a + d * t;
+}
+
+function render(alpha: number): void {
   const { width, height } = viewport;
   ctx.fillStyle = config.palette.asphalt;
   ctx.fillRect(0, 0, width, height);
 
-  const radius = Math.min(width, height) * 0.3;
-  const cx = width / 2 + Math.cos(angle) * radius;
-  const cy = height * 0.6 + Math.sin(angle) * radius;
+  const x = prev.x + (car.x - prev.x) * alpha;
+  const y = prev.y + (car.y - prev.y) * alpha;
+  const heading = lerpAngle(prev.heading, car.heading, alpha);
 
-  ctx.strokeStyle = config.palette.edgeLine;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(width / 2, height * 0.6, radius, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.fillStyle = config.palette.accent;
-  ctx.fillRect(cx - 12, cy - 12, 24, 24);
+  beginWorld(ctx, viewport, camera);
+  drawField(ctx, viewport, camera);
+  drawCar(ctx, x, y, heading);
+  endWorld(ctx);
 
   frames += 1;
   const now = performance.now();
@@ -45,13 +58,15 @@ function render(): void {
     frames = 0;
     fpsWindowStart = now;
   }
-  ctx.fillStyle = config.palette.hudText;
-  ctx.font = '600 14px system-ui, sans-serif';
-  ctx.textBaseline = 'top';
-  ctx.fillText(
-    `${String(fps)} fps  ${String(width)}x${String(height)} @${String(viewport.dpr)}x`,
-    16,
-    16 + safeAreaTop(),
+  drawDebug(
+    ctx,
+    viewport,
+    car,
+    telemetry(car),
+    fps,
+    input.state.steer,
+    input.state.throttle,
+    safeAreaTop(),
   );
 }
 
@@ -64,11 +79,12 @@ function safeAreaTop(): number {
 const loop = new GameLoop({ update, render }, config.loop);
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    loop.stop();
-  } else {
-    loop.start();
-  }
+  if (document.hidden) loop.stop();
+  else loop.start();
 });
+
+if (new URLSearchParams(location.search).has('debug')) {
+  mountDebugPanel();
+}
 
 loop.start();
