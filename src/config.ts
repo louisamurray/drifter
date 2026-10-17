@@ -64,6 +64,22 @@ export const config = {
     drag: 2.5,
     grip: 0.6,
   },
+  scoring: {
+    /** Run length in seconds. */
+    runSeconds: 60,
+    /** Points per second at x1 = pointsScale * |slip angle in rad| * speed. */
+    pointsScale: 1,
+    /** Multiplier gained per step, and seconds of continuous drift per step. */
+    multiplierStep: 0.5,
+    multiplierEvery: 2,
+    multiplierMax: 5,
+    /** Seconds without drifting before a chain banks. */
+    graceSeconds: 1,
+    /** Flat bonus for completing a lap. */
+    lapBonus: 500,
+    /** Countdown length in seconds. */
+    countdownSeconds: 3,
+  },
   camera: {
     /** Seconds of velocity to lead the car by. */
     leadTime: 0.35,
@@ -75,6 +91,8 @@ export const config = {
     zoomFast: 0.85,
     /** Zoom smoothing rate (1/s). */
     zoomRate: 2.5,
+    /** Fraction of the screen the whole track fills on the game-over overview. */
+    overviewFill: 0.8,
   },
   palette: {
     asphalt: '#1c2230',
