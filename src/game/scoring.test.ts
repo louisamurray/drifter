@@ -3,7 +3,14 @@ import { config } from '../config';
 import { createScore, drainEvents, multiplierProgress, updateScore } from './scoring';
 
 const dt = 1 / 60;
-const drift = { drifting: true, offTrack: false, slipAngle: 0.7, speed: 300, lapCompleted: false };
+const drift = {
+  drifting: true,
+  offTrack: false,
+  slipAngle: 0.7,
+  speed: 300,
+  lapCompleted: false,
+  handbrake: false,
+};
 const straight = { ...drift, drifting: false, slipAngle: 0 };
 
 function run(s: ReturnType<typeof createScore>, input: typeof drift, seconds: number) {
@@ -46,14 +53,27 @@ describe('updateScore', () => {
     expect(drainEvents(s).some((e) => e.type === 'bank')).toBe(true);
   });
 
-  it('forfeits the chain when the car leaves the road', () => {
+  it('keeps part of the chain and drops the multiplier when the car leaves the road', () => {
     const s = createScore();
     run(s, drift, 3);
-    expect(s.chain).toBeGreaterThan(0);
+    const chain = s.chain;
+    expect(chain).toBeGreaterThan(0);
+    expect(s.multiplier).toBeGreaterThan(1);
     updateScore(s, { ...drift, offTrack: true }, dt);
     expect(s.chain).toBe(0);
-    expect(s.score).toBe(0);
-    expect(drainEvents(s).some((e) => e.type === 'lost')).toBe(true);
+    expect(s.multiplier).toBe(1);
+    expect(s.score).toBeCloseTo(chain * config.scoring.offTrackKeep, 5);
+    const lost = drainEvents(s).find((e) => e.type === 'lost');
+    expect(lost).toBeDefined();
+    if (lost?.type === 'lost') expect(lost.amount + lost.kept).toBeCloseTo(chain, 5);
+  });
+
+  it('scores at a reduced rate under the handbrake', () => {
+    const a = createScore();
+    const b = createScore();
+    run(a, drift, 1);
+    run(b, { ...drift, handbrake: true }, 1);
+    expect(b.chain).toBeCloseTo(a.chain * config.scoring.handbrakeScoreScale, 3);
   });
 
   it('adds a flat lap bonus straight to the score', () => {

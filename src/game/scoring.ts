@@ -3,7 +3,7 @@ import { config } from '../config';
 export type ScoreEvent =
   | { type: 'multiplier'; value: number }
   | { type: 'bank'; amount: number }
-  | { type: 'lost'; amount: number }
+  | { type: 'lost'; amount: number; kept: number }
   | { type: 'lap'; bonus: number };
 
 export interface ScoreState {
@@ -29,6 +29,7 @@ export interface ScoreInput {
   speed: number;
   /** True on the step a lap was completed. */
   lapCompleted: boolean;
+  handbrake: boolean;
 }
 
 export function createScore(): ScoreState {
@@ -86,8 +87,12 @@ export function updateScore(s: ScoreState, input: ScoreInput, dt: number): void 
   }
 
   if (input.offTrack) {
-    // Leaving the road forfeits the chain outright
-    if (s.chain > 0) s.events.push({ type: 'lost', amount: s.chain });
+    // Running wide ends the chain: part of it banks, the rest is lost with the multiplier
+    if (s.chain > 0) {
+      const kept = s.chain * c.offTrackKeep;
+      s.score += kept;
+      s.events.push({ type: 'lost', amount: s.chain - kept, kept });
+    }
     resetChain(s);
     return;
   }
@@ -101,7 +106,8 @@ export function updateScore(s: ScoreState, input: ScoreInput, dt: number): void 
       s.multiplier = next;
       s.events.push({ type: 'multiplier', value: next });
     }
-    s.chain += c.pointsScale * Math.abs(input.slipAngle) * input.speed * dt * s.multiplier;
+    const rate = c.pointsScale * (input.handbrake ? c.handbrakeScoreScale : 1);
+    s.chain += rate * Math.abs(input.slipAngle) * input.speed * dt * s.multiplier;
     return;
   }
 
