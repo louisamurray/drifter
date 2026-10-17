@@ -17,7 +17,7 @@ export function mountDebugPanel(): void {
   const groups: Group[] = [
     { label: 'physics', values: config.physics },
     { label: 'camera', values: config.camera },
-    { label: 'input', values: config.input },
+    { label: 'steer', values: config.input.steer },
   ];
 
   const root = document.createElement('details');

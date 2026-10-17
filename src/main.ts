@@ -5,7 +5,15 @@ import { TouchControls } from './core/input';
 import { GameLoop } from './core/loop';
 import type { GameState } from './core/state';
 import { autopilot } from './game/autopilot';
-import { createCar, ROAD, stepCar, telemetry, type CarState, type Surface } from './game/car';
+import {
+  assistYaw,
+  createCar,
+  ROAD,
+  stepCar,
+  telemetry,
+  type CarState,
+  type Surface,
+} from './game/car';
 import type { InputState } from './core/input';
 import { createLapState, updateLaps } from './game/laps';
 import {
@@ -61,6 +69,7 @@ const prev: CarState = { ...car };
 let laps = createLapState();
 let score = createScore();
 let offTrack = false;
+let roadHeading = start.heading;
 let popups: Popup[] = [];
 let best = loadBest();
 let newBest = false;
@@ -82,6 +91,7 @@ function resetRun(): void {
   laps = createLapState();
   score = createScore();
   offTrack = false;
+  roadHeading = start.heading;
   popups = [];
   newBest = false;
   everDrifted = false;
@@ -183,8 +193,11 @@ function captureFrame(): Promise<File | null> {
 
 function stepPhysics(dt: number, ctl: InputState): void {
   Object.assign(prev, car);
-  stepCar(car, ctl, dt, config.physics, offTrack ? grass : ROAD);
+  const assist = assistYaw(car.heading, roadHeading, car.drifting, offTrack, config.physics);
+  stepCar(car, ctl, dt, config.physics, offTrack ? grass : ROAD, assist);
   const q = nearestOnTrack(track, car.x, car.y);
+  const tp = track.points[q.index];
+  if (tp) roadHeading = Math.atan2(tp.ty, tp.tx);
   offTrack = isOffTrack(track, q.distance);
   const lapsBefore = laps.laps;
   updateLaps(laps, q.s, track.length, dt);
@@ -297,7 +310,7 @@ function update(dt: number): void {
     case 'playing': {
       const ctl = debugState.autopilot
         ? autopilot(track, car, debugState.aggression)
-        : input.sample(dt, config.input.steerRampSeconds);
+        : input.sample(dt, config.input.steer);
       stepPhysics(dt, ctl);
       playTime += dt;
       hud.setZones(best === 0 && playTime < 5, input.held.left, input.held.right);
