@@ -6,7 +6,7 @@ const p = config.physics;
 const dt = 1 / 60;
 
 function run(steps: number, steer: number, throttle = 1, car = createCar()) {
-  for (let i = 0; i < steps; i++) stepCar(car, { throttle, steer }, dt, p);
+  for (let i = 0; i < steps; i++) stepCar(car, { throttle, steer, handbrake: false }, dt, p);
   return car;
 }
 
@@ -40,6 +40,28 @@ describe('stepCar', () => {
     run(180, 0, 1, car); // straighten
     expect(car.drifting).toBe(false);
     expect(Math.abs(telemetry(car).lateralSpeed)).toBeLessThan(p.driftExitLateral);
+  });
+
+  it('handbrake slows the car faster than coasting', () => {
+    const coast = run(120, 0);
+    const braked = run(120, 0);
+    for (let i = 0; i < 60; i++) {
+      stepCar(coast, { throttle: 0, steer: 0, handbrake: false }, dt, p);
+      stepCar(braked, { throttle: 0, steer: 0, handbrake: true }, dt, p);
+    }
+    expect(telemetry(braked).speed).toBeLessThan(telemetry(coast).speed * 0.6);
+  });
+
+  it('handbrake lets the rear step out further under steering', () => {
+    const grip = run(120, 0);
+    const braked = run(120, 0);
+    for (let i = 0; i < 20; i++) {
+      stepCar(grip, { throttle: 0, steer: 1, handbrake: false }, dt, p);
+      stepCar(braked, { throttle: 0, steer: 1, handbrake: true }, dt, p);
+    }
+    expect(Math.abs(telemetry(braked).slipAngle)).toBeGreaterThan(
+      Math.abs(telemetry(grip).slipAngle),
+    );
   });
 
   it('coasts to a stop when throttle is released', () => {

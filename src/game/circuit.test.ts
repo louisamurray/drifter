@@ -38,8 +38,14 @@ describe('circuit with shipped physics', () => {
     const road = createCar();
     const grass = createCar();
     for (let i = 0; i < 180; i++) {
-      stepCar(road, { throttle: 1, steer: 0 }, 1 / 60, config.physics, ROAD);
-      stepCar(grass, { throttle: 1, steer: 0 }, 1 / 60, config.physics, config.offTrack);
+      stepCar(road, { throttle: 1, steer: 0, handbrake: false }, 1 / 60, config.physics, ROAD);
+      stepCar(
+        grass,
+        { throttle: 1, steer: 0, handbrake: false },
+        1 / 60,
+        config.physics,
+        config.offTrack,
+      );
     }
     expect(telemetry(grass).speed).toBeLessThan(telemetry(road).speed * 0.4);
   });

@@ -74,7 +74,8 @@ export function stepCar(
   // Longitudinal
   const accel = (car.drifting ? p.accel * p.driftAccelBoost : p.accel) * surface.accel;
   vF += accel * input.throttle * dt;
-  vF -= p.drag * surface.drag * vF * dt;
+  const drag = p.drag * surface.drag + (input.handbrake ? p.handbrakeDrag : 0);
+  vF -= drag * vF * dt;
   if (input.throttle === 0) {
     const roll = p.rolling * dt;
     vF = Math.abs(vF) <= roll ? 0 : vF - Math.sign(vF) * roll;
@@ -96,9 +97,10 @@ export function stepCar(
   vL = wx * -fy + wy * fx;
 
   // Lateral grip, reduced by steering effort at speed so the car can break loose
-  const baseGrip = car.drifting
+  let baseGrip = car.drifting
     ? p.gripDrift
     : p.gripNormal * (1 - p.steerGripLoss * Math.abs(input.steer) * speedRatio);
+  if (input.handbrake) baseGrip = Math.min(baseGrip, p.handbrakeGrip);
   const grip = baseGrip * surface.grip;
   vL *= Math.exp(-grip * dt);
 
