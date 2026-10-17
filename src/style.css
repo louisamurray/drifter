@@ -7,7 +7,15 @@
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
   --sar: env(safe-area-inset-right, 0px);
-  --font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('./assets/fonts/archivo-expanded-800.woff2') format('woff2');
 }
 
 html,
@@ -81,13 +89,13 @@ body {
   right: 0;
   text-align: center;
   font-size: clamp(44px, 14vw, 72px);
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: 0.12em;
   text-shadow: 0 2px 24px rgba(0, 0, 0, 0.5);
 }
 .title-cta {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   animation: breathe 1.6s ease-in-out infinite;
@@ -138,7 +146,7 @@ body {
 }
 .countdown-number {
   font-size: clamp(96px, 32vw, 160px);
-  font-weight: 900;
+  font-weight: 800;
   color: var(--accent);
   text-shadow: 0 4px 32px rgba(0, 0, 0, 0.6);
   margin-top: -20vh;
@@ -221,6 +229,18 @@ body {
 .hud-mult.punch {
   animation: punch 0.28s cubic-bezier(0.2, 1.6, 0.4, 1);
 }
+.hud-mult::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+}
+.hud-mult.punch::after {
+  animation: flash 0.32s ease-out;
+}
 
 /* Paused */
 .screen-paused.active {
@@ -268,7 +288,7 @@ body {
 }
 .over-score {
   font-size: clamp(48px, 16vw, 80px);
-  font-weight: 900;
+  font-weight: 800;
   line-height: 1;
   text-shadow: 0 2px 24px rgba(0, 0, 0, 0.5);
 }
@@ -293,7 +313,7 @@ body {
   color: var(--text);
   font: inherit;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.04em;
   padding: 14px 20px;
   border-radius: 12px;
@@ -338,6 +358,14 @@ body {
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+@keyframes flash {
+  0% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
   }
 }
 @keyframes punch {
