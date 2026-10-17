@@ -108,35 +108,35 @@ body {
 }
 .hint {
   position: relative;
-  width: 160px;
-  height: 56px;
+  width: 220px;
+  height: 64px;
 }
 .hint-thumb {
   position: absolute;
   top: 8px;
-  left: 60px;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 3px solid var(--cream);
   box-sizing: border-box;
-  animation: thumb 2.4s ease-in-out infinite;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-.hint::before,
-.hint::after {
-  content: '';
-  position: absolute;
-  top: 26px;
-  width: 36px;
-  height: 3px;
-  background: var(--cream);
-  opacity: 0.35;
+.hint-left {
+  left: 16px;
+  animation: hold 2.4s ease-in-out infinite;
 }
-.hint::before {
-  left: 8px;
+.hint-right {
+  right: 16px;
+  animation: hold 2.4s ease-in-out infinite 1.2s;
 }
-.hint::after {
-  right: 8px;
+.title-sub {
+  font-size: 13px;
+  opacity: 0.75;
+  margin-top: -8px;
 }
 
 /* Countdown */
@@ -157,6 +157,59 @@ body {
 }
 
 /* Playing */
+.zones {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.zones.show {
+  opacity: 1;
+}
+.zone {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: calc(var(--sab) + 18vh);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cream);
+  opacity: 0.55;
+  transition: background 0.15s ease;
+}
+.zone-left::after {
+  content: '◀ hold';
+}
+.zone-right::after {
+  content: 'hold ▶';
+}
+.zone.held {
+  background: rgba(232, 220, 196, 0.08);
+}
+.hud-pause {
+  position: absolute;
+  top: calc(var(--sat) + 58px);
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  appearance: none;
+  border: 2px solid rgba(242, 238, 230, 0.4);
+  background: rgba(28, 34, 48, 0.5);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  width: 40px;
+  height: 28px;
+  border-radius: 14px;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
 .hud-score,
 .hud-timer,
 .hud-mult {
@@ -342,13 +395,17 @@ body {
     opacity: 0.55;
   }
 }
-@keyframes thumb {
+@keyframes hold {
   0%,
+  45%,
   100% {
-    transform: translateX(-44px);
+    background: transparent;
+    transform: scale(1);
   }
-  50% {
-    transform: translateX(44px);
+  10%,
+  35% {
+    background: rgba(232, 220, 196, 0.35);
+    transform: scale(0.92);
   }
 }
 @keyframes pop {
@@ -380,7 +437,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .title-cta,
-  .hint-thumb,
+  .hint-left,
+  .hint-right,
   .over-newbest.show {
     animation: none;
   }

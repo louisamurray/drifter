@@ -14,6 +14,9 @@ export class Hud {
   private readonly multEl: HTMLElement;
   private readonly ringEl: SVGCircleElement;
   private readonly ringLength: number;
+  private readonly zonesEl: HTMLElement;
+  private readonly zoneLeft: HTMLElement;
+  private readonly zoneRight: HTMLElement;
 
   // Title / game over
   private readonly titleBestEl: HTMLElement;
@@ -27,6 +30,7 @@ export class Hud {
   onRestart: (() => void) | null = null;
   onResume: (() => void) | null = null;
   onShare: (() => void) | null = null;
+  onPause: (() => void) | null = null;
 
   constructor(parent: HTMLElement) {
     this.root = el('div', 'hud');
@@ -36,8 +40,12 @@ export class Hud {
     const title = el('button', 'screen screen-title');
     title.innerHTML = `
       <div class="title-logo">DRIFTER</div>
-      <div class="hint"><div class="hint-thumb"></div></div>
+      <div class="hint">
+        <div class="hint-thumb hint-left"><span>hold</span></div>
+        <div class="hint-thumb hint-right"><span>hold</span></div>
+      </div>
       <div class="title-cta">Tap to drive</div>
+      <div class="title-sub">Hold a side to steer. Both for handbrake.</div>
       <div class="title-best"></div>`;
     title.addEventListener('click', () => {
       this.onStart?.();
@@ -54,8 +62,10 @@ export class Hud {
     // Playing
     const playing = el('div', 'screen screen-playing');
     playing.innerHTML = `
+      <div class="zones"><div class="zone zone-left"></div><div class="zone zone-right"></div></div>
       <div class="hud-score"><span class="label">score</span><span class="value">0</span></div>
       <div class="hud-timer">60.0</div>
+      <button class="hud-pause" data-act="pause" aria-label="Pause">II</button>
       <div class="hud-mult">
         <svg viewBox="0 0 44 44" class="ring">
           <circle class="ring-track" cx="22" cy="22" r="19"></circle>
@@ -69,6 +79,12 @@ export class Hud {
     this.ringEl = must(playing.querySelector('.ring-fill'));
     this.ringLength = 2 * Math.PI * 19;
     this.ringEl.style.strokeDasharray = String(this.ringLength);
+    this.zonesEl = must(playing.querySelector('.zones'));
+    this.zoneLeft = must(playing.querySelector('.zone-left'));
+    this.zoneRight = must(playing.querySelector('.zone-right'));
+    playing.addEventListener('click', (e) => {
+      this.dispatch(e);
+    });
     this.screens.set('playing', playing);
 
     // Paused
@@ -116,6 +132,7 @@ export class Hud {
     if (act === 'resume') this.onResume?.();
     else if (act === 'restart') this.onRestart?.();
     else if (act === 'share') this.onShare?.();
+    else if (act === 'pause') this.onPause?.();
   }
 
   show(state: GameState): void {
@@ -148,6 +165,13 @@ export class Hud {
     }
     this.multEl.parentElement?.classList.toggle('hot', multiplier > 1);
     this.ringEl.style.strokeDashoffset = String(this.ringLength * (1 - progress));
+  }
+
+  /** Faint left/right cues for new players; `show` fades them in and out. */
+  setZones(show: boolean, left: boolean, right: boolean): void {
+    this.zonesEl.classList.toggle('show', show);
+    this.zoneLeft.classList.toggle('held', left);
+    this.zoneRight.classList.toggle('held', right);
   }
 
   setGameOver(score: number, best: number, isNewBest: boolean): void {
