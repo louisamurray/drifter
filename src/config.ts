@@ -16,12 +16,21 @@ export const config = {
     carScreenY: 0.6,
   },
   input: {
-    /** Seconds for steer to ramp from centre to full lock after a press. */
-    steerRampSeconds: 0.1,
+    /**
+     * Two-stage steering. A hold first ramps to `stage1` (a grip turn) over
+     * `stage1Seconds`, then on to full lock over `stage2Seconds` (the drift).
+     * Tap to correct, hold to commit. Release returns to centre in `releaseSeconds`.
+     */
+    steer: {
+      stage1: 0.5,
+      stage1Seconds: 0.3,
+      stage2Seconds: 0.5,
+      releaseSeconds: 0.1,
+    },
   },
   physics: {
     /** World units are pixels at zoom 1. */
-    maxSpeed: 460,
+    maxSpeed: 360,
     accel: 420,
     /** Linear drag coefficient (1/s) applied to forward speed. */
     drag: 0.55,
@@ -30,19 +39,26 @@ export const config = {
     /** Lateral damping (1/s) with grip. Higher snaps the car straight faster. */
     gripNormal: 8,
     /** Lateral damping (1/s) while drifting. Low keeps the slide going. */
-    gripDrift: 2.4,
+    gripDrift: 3,
     /** Fraction of grip lost at full steer and full speed. Lets the car break loose. */
     steerGripLoss: 0.6,
     /** Peak yaw rate (rad/s) at full steer. */
-    steerRate: 2.8,
+    steerRate: 3.6,
     /** Forward speed at which steering has full authority. */
     steerFullSpeed: 140,
     /** Yaw rate reduction at max speed (0 none, 1 no steering at top speed). */
     highSpeedSteerLoss: 0.4,
     /** Yaw multiplier while drifting so holding the slide feels intentional. */
     driftYawBoost: 1.15,
+    /**
+     * Throttle cut in the second steering stage: a long hold slows the car as
+     * it tightens the slide, so corners are makeable without the handbrake.
+     * Full lock multiplies throttle by (1 - turnThrottleCut).
+     */
+    turnThrottleCut: 0.5,
+    turnThrottleFrom: 0.5,
     /** Throttle multiplier while drifting. Offsets the speed a slide scrubs off. */
-    driftAccelBoost: 1.8,
+    driftAccelBoost: 1.5,
     /** Lateral speed (px/s) above which the car counts as drifting. */
     driftEnterLateral: 70,
     /** Lateral speed (px/s) below which a drift ends. Hysteresis against flicker. */
@@ -53,6 +69,14 @@ export const config = {
     handbrakeGrip: 1.1,
     /** Extra linear drag (1/s) while the handbrake is held. */
     handbrakeDrag: 1.3,
+    /**
+     * Road assist: with no steering held and on asphalt, the heading eases
+     * towards the road direction. Yaw = clamp(error * gain, max), scaled down
+     * while drifting so a slide can still be exited on the player's terms.
+     */
+    assistGain: 2.2,
+    assistMaxYaw: 1.2,
+    assistDriftScale: 0.5,
   },
   track: {
     /** Road width in world px. */
@@ -63,7 +87,7 @@ export const config = {
   offTrack: {
     /** Multipliers applied to physics while off the road. */
     accel: 0.5,
-    drag: 2.5,
+    drag: 3,
     grip: 0.6,
   },
   scoring: {
