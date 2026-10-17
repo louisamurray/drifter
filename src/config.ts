@@ -16,10 +16,8 @@ export const config = {
     carScreenY: 0.6,
   },
   input: {
-    /** Horizontal drag in CSS px before steering starts. */
-    deadZonePx: 8,
-    /** Horizontal drag in CSS px for full steering lock. */
-    fullLockPx: 60,
+    /** Seconds for steer to ramp from centre to full lock after a press. */
+    steerRampSeconds: 0.1,
   },
   physics: {
     /** World units are pixels at zoom 1. */
@@ -51,6 +49,10 @@ export const config = {
     driftExitLateral: 35,
     /** Minimum forward speed for a drift to count. */
     driftMinForward: 110,
+    /** Lateral damping (1/s) while the handbrake is held. Low: the rear steps out. */
+    handbrakeGrip: 1.1,
+    /** Extra linear drag (1/s) while the handbrake is held. */
+    handbrakeDrag: 1.3,
   },
   track: {
     /** Road width in world px. */
@@ -77,6 +79,10 @@ export const config = {
     graceSeconds: 1,
     /** Flat bonus for completing a lap. */
     lapBonus: 500,
+    /** Points rate multiplier while the handbrake is held. Starts chains, not free points. */
+    handbrakeScoreScale: 0.35,
+    /** Fraction of an open chain kept when the car leaves the road. The rest is lost. */
+    offTrackKeep: 0.5,
     /** Countdown length in seconds. */
     countdownSeconds: 3,
   },
