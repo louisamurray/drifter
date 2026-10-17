@@ -80,6 +80,23 @@ export const config = {
     /** Countdown length in seconds. */
     countdownSeconds: 3,
   },
+  juice: {
+    /** Skid canvas resolution in pixels per world unit. */
+    skidScale: 1.25,
+    /** Alpha laid down per pass at full drift intensity. Builds up on repeated passes. */
+    skidAlpha: 0.28,
+    skidWidth: 6,
+    /** Lateral speed at which skid and smoke intensity saturate. */
+    fullIntensityLateral: 220,
+    /** Smoke particles per second per wheel at full intensity. */
+    smokeRate: 26,
+    smokeMax: 240,
+    /** Screen shake on chain bank: base px plus px per decade of chain size. */
+    shakeBase: 3,
+    shakePerDecade: 2.5,
+    shakeMax: 14,
+    shakeDuration: 0.32,
+  },
   camera: {
     /** Seconds of velocity to lead the car by. */
     leadTime: 0.35,
@@ -104,6 +121,8 @@ export const config = {
     carBody: '#e8dcc4',
     carRoof: '#fffaf0',
     carWheel: '#0d1016',
+    carOutline: 'rgba(13, 16, 22, 0.55)',
+    smoke: '210, 205, 195',
   },
 };
 
