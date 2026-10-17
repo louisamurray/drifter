@@ -1,11 +1,12 @@
 import './style.css';
 import { config } from './config';
 import { CanvasSurface } from './core/canvas';
-import { PointerInput } from './core/input';
+import { TouchControls } from './core/input';
 import { GameLoop } from './core/loop';
 import type { GameState } from './core/state';
 import { autopilot } from './game/autopilot';
 import { createCar, ROAD, stepCar, telemetry, type CarState, type Surface } from './game/car';
+import type { InputState } from './core/input';
 import { createLapState, updateLaps } from './game/laps';
 import {
   bankShakeAmplitude,
@@ -44,7 +45,7 @@ if (!(canvasEl instanceof HTMLCanvasElement)) {
 const debug = new URLSearchParams(location.search).has('debug');
 const surface = new CanvasSurface(canvasEl);
 const { ctx, viewport } = surface;
-const input = new PointerInput(canvasEl);
+const input = new TouchControls(canvasEl);
 const hud = new Hud(document.body);
 
 const track = buildTrack({ ...CIRCUIT, width: config.track.width, scale: config.track.scale });
@@ -61,6 +62,7 @@ let popups: Popup[] = [];
 let best = loadBest();
 let newBest = false;
 let countdownLeft = 0;
+let playTime = 0;
 
 const skids = new SkidLayer(track);
 const smoke = new SmokePool(config.juice.smokeMax);
@@ -79,6 +81,8 @@ function resetRun(): void {
   popups = [];
   newBest = false;
   everDrifted = false;
+  playTime = 0;
+  hud.setZones(false, false, false);
   skids.clear();
   smoke.clear();
   input.reset();
@@ -118,7 +122,7 @@ hud.onResume = () => {
 hud.onShare = () => {
   void share();
 };
-input.onSecondPointer = () => {
+hud.onPause = () => {
   if (state === 'playing') setState('paused');
 };
 input.onPauseKey = () => {
@@ -152,9 +156,9 @@ function captureFrame(): Promise<File | null> {
 
 // ---- Simulation -----------------------------------------------------------
 
-function stepPhysics(dt: number, steer: number, throttle: number): void {
+function stepPhysics(dt: number, ctl: InputState): void {
   Object.assign(prev, car);
-  stepCar(car, { steer, throttle }, dt, config.physics, offTrack ? grass : ROAD);
+  stepCar(car, ctl, dt, config.physics, offTrack ? grass : ROAD);
   const q = nearestOnTrack(track, car.x, car.y);
   offTrack = isOffTrack(track, q.distance);
   const lapsBefore = laps.laps;
@@ -171,6 +175,7 @@ function stepPhysics(dt: number, steer: number, throttle: number): void {
         slipAngle: t.slipAngle,
         speed: t.speed,
         lapCompleted: laps.laps > lapsBefore,
+        handbrake: ctl.handbrake,
       },
       dt,
     );
@@ -212,7 +217,9 @@ function handleScoreEvents(): void {
       );
       haptic(20);
     } else if (e.type === 'lost') {
-      popups.push(popup(`−${fmtScore(e.amount)}`, cx, cy - 70, 'rgba(242,238,230,0.5)', 22));
+      popups.push(
+        popup(`+${fmtScore(e.kept)}  ran wide`, cx, cy - 70, 'rgba(242,238,230,0.55)', 20),
+      );
     } else if (e.type === 'lap') {
       popups.push(popup(`LAP +${fmtScore(e.bonus)}`, cx, cy - 110, config.palette.edgeLine, 22));
     } else {
@@ -229,8 +236,7 @@ function popup(text: string, x: number, y: number, color: string, size: number):
 function update(dt: number): void {
   switch (state) {
     case 'title': {
-      const ai = autopilot(track, car);
-      stepPhysics(dt, ai.steer, ai.throttle);
+      stepPhysics(dt, autopilot(track, car));
       break;
     }
     case 'countdown': {
@@ -242,8 +248,12 @@ function update(dt: number): void {
       break;
     }
     case 'playing': {
-      const ctl = debugState.autopilot ? autopilot(track, car, debugState.aggression) : input.state;
-      stepPhysics(dt, ctl.steer, ctl.throttle);
+      const ctl = debugState.autopilot
+        ? autopilot(track, car, debugState.aggression)
+        : input.sample(dt, config.input.steerRampSeconds);
+      stepPhysics(dt, ctl);
+      playTime += dt;
+      hud.setZones(best === 0 && playTime < 5, input.held.left, input.held.right);
       break;
     }
     case 'paused': {
