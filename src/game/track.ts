@@ -55,31 +55,34 @@ export interface TrackQuery {
 
 /**
  * The v1 circuit: a long straight up the right side, a fast sweeper across the
- * top, a hairpin at top-left, an S through the middle, and a wide sweeper home.
+ * top, a hairpin at top-left, a looping S through the middle, and a wide sweeper
+ * home. No centreline radius is tighter than 95 world units, so a car that never
+ * brakes can still get round with a long hold.
  */
 export const CIRCUIT: TrackDef = {
   controls: [
-    { x: 400, y: 250 }, // start line, mid-straight so the opening heading is dead straight
+    { x: 400, y: 300 }, // start line, mid-straight so the opening heading is dead straight
     { x: 400, y: -150 },
     { x: 400, y: -500 },
     { x: 300, y: -720 },
     { x: 0, y: -800 },
     { x: -260, y: -720 },
-    { x: -420, y: -560 }, // hairpin
-    { x: -430, y: -400 },
-    { x: -300, y: -320 },
-    { x: -100, y: -250 },
-    { x: 60, y: -100 }, // S, tightest corner
-    { x: -100, y: 60 },
-    { x: -300, y: 160 },
-    { x: -430, y: 360 },
-    { x: -380, y: 580 },
-    { x: -180, y: 720 },
-    { x: 80, y: 770 },
-    { x: 300, y: 720 },
-    { x: 400, y: 600 },
+    { x: -470, y: -540 },
+    { x: -510, y: -310 }, // hairpin
+    { x: -370, y: -150 },
+    { x: -160, y: -100 },
+    { x: 50, y: -20 },
+    { x: 140, y: 140 }, // S loop apex
+    { x: 40, y: 290 },
+    { x: -200, y: 340 },
+    { x: -450, y: 440 },
+    { x: -450, y: 660 },
+    { x: -240, y: 810 },
+    { x: 40, y: 850 },
+    { x: 250, y: 820 },
+    { x: 390, y: 700 },
   ],
-  rumbleAt: [6, 10],
+  rumbleAt: [7, 11],
   width: 120,
   scale: 0.8,
   samplesPerSegment: 12,

@@ -16,9 +16,9 @@ describe('buildTrack', () => {
     expect(track.length).toBeGreaterThan(last.s);
   });
 
-  it('is between 3 and 6 screen heights long', () => {
+  it('is between 3 and 7 screen heights long', () => {
     expect(track.length).toBeGreaterThan(844 * 3);
-    expect(track.length).toBeLessThan(844 * 6);
+    expect(track.length).toBeLessThan(844 * 7);
   });
 
   it('never folds back on itself closer than the road width', () => {
