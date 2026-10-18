@@ -129,6 +129,16 @@ body {
   opacity: 0.75;
   min-height: 1.2em;
 }
+.title-install {
+  display: none;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.title-install.show {
+  display: block;
+}
 .hint {
   position: relative;
   width: 220px;
@@ -193,9 +203,11 @@ body {
 .zone {
   flex: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding-bottom: calc(var(--sab) + 18vh);
+  /* Mid-screen, so a new player never learns to rest a thumb on the browser's
+     bottom toolbar. The car sits below at 60%. */
+  padding-bottom: 20vh;
   font-size: 13px;
   letter-spacing: 0.14em;
   text-transform: uppercase;

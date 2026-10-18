@@ -20,6 +20,7 @@ export class Hud {
 
   // Title / game over
   private readonly titleBestEl: HTMLElement;
+  private readonly installEl: HTMLElement;
   private readonly finalScoreEl: HTMLElement;
   private readonly finalBestEl: HTMLElement;
   private readonly newBestEl: HTMLElement;
@@ -48,14 +49,16 @@ export class Hud {
         <div class="hint-thumb hint-right"><span>hold</span></div>
       </div>
       <div class="title-cta">Tap to drive</div>
-      <div class="title-sub">Hold a side to steer. Both for handbrake.</div>
-      <div class="title-best"></div>`;
+      <div class="title-sub">Hold a side, mid-screen, to steer. Both for handbrake.</div>
+      <div class="title-best"></div>
+      <div class="title-install">Add to Home Screen to play full screen</div>`;
     title.addEventListener('click', (e) => {
       if (this.dispatch(e)) return;
       this.onStart?.();
     });
     this.soundButtons.push(must(title.querySelector('.sound-toggle')));
     this.titleBestEl = must(title.querySelector('.title-best'));
+    this.installEl = must(title.querySelector('.title-install'));
     this.screens.set('title', title);
 
     // Countdown
@@ -163,6 +166,11 @@ export class Hud {
     this.titleBestEl.textContent = best > 0 ? `best ${fmtScore(best)}` : '';
   }
 
+  /** Shown in a browser on a touch device, where its toolbar sits under the thumb. */
+  setInstallHint(show: boolean): void {
+    this.installEl.classList.toggle('show', show);
+  }
+
   setCountdown(secondsLeft: number): void {
     const n = Math.ceil(secondsLeft);
     const text = n <= 0 ? 'GO' : String(n);
@@ -185,7 +193,7 @@ export class Hud {
     this.ringEl.style.strokeDashoffset = String(this.ringLength * (1 - progress));
   }
 
-  /** Faint left/right cues for new players; `show` fades them in and out. */
+  /** Faint left/right cues for new players, up to their first lap; `show` fades them in and out. */
   setZones(show: boolean, left: boolean, right: boolean): void {
     this.zonesEl.classList.toggle('show', show);
     this.zoneLeft.classList.toggle('held', left);

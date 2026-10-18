@@ -67,6 +67,7 @@ const input = new TouchControls(canvasEl);
 const hud = new Hud(document.body);
 const audio = new AudioEngine();
 hud.setSound(!audio.muted);
+hud.setInstallHint(!isStandalone() && matchMedia('(pointer: coarse)').matches);
 
 const track = buildTrack({ ...CIRCUIT, width: config.track.width, scale: config.track.scale });
 const start = startPose(track);
@@ -84,7 +85,6 @@ let popups: Popup[] = [];
 let best = loadBest();
 let newBest = false;
 let countdownLeft = 0;
-let playTime = 0;
 let lastTick = 0;
 
 const skids = new SkidLayer(track);
@@ -106,7 +106,6 @@ function resetRun(): void {
   popups = [];
   newBest = false;
   everDrifted = false;
-  playTime = 0;
   hud.setZones(false, false, false);
   skids.clear();
   smoke.clear();
@@ -330,8 +329,7 @@ function update(dt: number): void {
         ? autopilot(track, car, debugState.aggression)
         : input.sample(dt, config.input.steer);
       stepPhysics(dt, ctl);
-      playTime += dt;
-      hud.setZones(best === 0 && playTime < 5, input.held.left, input.held.right);
+      hud.setZones(best === 0 && laps.laps === 0, input.held.left, input.held.right);
       break;
     }
     case 'paused': {
@@ -409,6 +407,12 @@ function render(alpha: number): void {
       `${audio.describe()}  haptics: ${hapticsDescription()}`,
     );
   }
+}
+
+/** True when launched from the Home Screen, where no browser toolbar sits under the thumb. */
+function isStandalone(): boolean {
+  const nav = navigator as Navigator & { standalone?: boolean };
+  return matchMedia('(display-mode: standalone)').matches || nav.standalone === true;
 }
 
 function safeAreaTop(): number {
