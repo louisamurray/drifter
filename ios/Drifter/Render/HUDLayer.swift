@@ -112,8 +112,9 @@ final class HUDLayer: SKNode {
         scoreCaption.position = CGPoint(x: safeLeft + 16, y: top - 14)
         scoreLabel.position = CGPoint(x: safeLeft + 16, y: top - 26)
         timerLabel.position = CGPoint(x: width - safeRight - 16, y: top - 22)
-        let ringX = width - safeRight - 16 - 22
-        let ringY = top - 60 - 22
+        let layout = PlayingHUDLayout(width: width, safeTop: safeTop, safeLeft: safeLeft, safeRight: safeRight)
+        let ringX = layout.multiplierFrame.midX
+        let ringY = height - layout.multiplierFrame.midY
         ringTrack.position = CGPoint(x: ringX, y: ringY)
         ringFill.position = ringTrack.position
         multLabel.position = ringTrack.position

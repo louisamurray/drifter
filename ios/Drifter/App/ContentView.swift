@@ -29,7 +29,7 @@ struct ContentView: View {
                 case .countdown:
                     CountdownView(value: game.countdown)
                 case .playing:
-                    PlayingOverlay()
+                    PlayingOverlay(safe: game.scene.view?.safeAreaInsets ?? .zero)
                 case .paused:
                     PausedView()
                 case .gameover:
@@ -198,25 +198,32 @@ struct CountdownView: View {
 }
 
 struct PlayingOverlay: View {
+    let safe: UIEdgeInsets
+
+    private var pauseFrame: CGRect {
+        PlayingHUDLayout(width: Double(game.scene.size.width), safeTop: Double(safe.top),
+                         safeLeft: Double(safe.left), safeRight: Double(safe.right)).pauseFrame
+    }
     @EnvironmentObject private var game: GameViewModel
 
     var body: some View {
         VStack {
             HStack {
-                Spacer()
                 Button(action: { game.pause() }) {
                     Image(systemName: "pause.fill")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(Color.hudText)
-                        .frame(width: 44, height: 44)
+                        .frame(width: pauseFrame.width, height: pauseFrame.height)
                         .background(Color.white.opacity(0.1), in: Circle())
                 }
                 .buttonStyle(.plain)
-                .padding(.trailing, 16)
-                .padding(.top, 116)
+                .accessibilityLabel("Pause")
+                Spacer()
             }
             Spacer()
         }
+        .padding(.leading, pauseFrame.minX)
+        .padding(.top, pauseFrame.minY)
     }
 }
 
