@@ -94,7 +94,7 @@ Values are starting points and live in `config.ts` alongside the physics tunable
 |---|---|---|
 | Asphalt | `#1C2230` | Cool near-black with a hint of blue. Not pure black, so rubber still reads on it |
 | Track edge line | `#E8DCC4` | Warm cream. The only painted detail on the track |
-| Off-track surface | muted olive, e.g. `#4A5238` | Deliberately dull so the eye is not pulled off the road |
+| Off-track surface | muted olive, e.g. `#4A5238` | Deliberately dull so the eye is not pulled off the road. Textured with mown stripes and specks a few percent off the base, so running wide still shows motion |
 | Skid marks | warm black at 70% alpha | Builds up with repeated passes |
 | Accent | `#FF5A2D` | Hot orange-red. Multiplier badge, chain score pops, smoke tint at high drift angle. **Never decorative.** If it appears anywhere else it has stopped working |
 | HUD text | `#F2EEE6` | Off-white |
@@ -109,9 +109,12 @@ One family: a wide or extended grotesk with a heavy weight and **tabular figures
 - A very light scrim behind HUD text only if the track shows through too noisily.
 - The multiplier badge changes **shape**, not just number: a ring fills over the 2 seconds before the next step so the player feels the next tier coming without reading. When the chain breaks, the ring empties with a hard snap, no fade.
 - Chain score pops at the car, not in the HUD.
+- A 3px bar under the status bar drains with the clock and turns accent for the last ten seconds, when each whole second also snaps the timer. Time left reads in peripheral vision without reading digits.
+- Off the road the screen edges darken. The vignette is a DOM layer the compositor fades, not a canvas gradient: shading one every frame cost a third of the frame budget on a software rasteriser.
 
 ### 3.6 Car and track
 - Car is roughly 36 to 44px long at phone scale. A detailed sprite becomes mud at that size. Use a two-tone silhouette with a lighter roof so heading is unambiguous, and rear wheels drawn slightly wider so smoke and rubber visibly come from them.
+- A soft shadow outside the edge line and a drop shadow under the car lift them off the grass. Chain text and score pops carry a dark halo so they read over cream and olive alike.
 - Track has one strong, consistent edge line. Rumble strips appear only on the two hardest corners, which doubles as the hint for where the best drifts are.
 - No tyre-stack barriers or roadside props. They add detail exactly where the player should be watching the car.
 
@@ -123,7 +126,7 @@ In priority order:
 4. **Game over.** Camera zooms out to show the whole track with the player's rubber on it, then score and buttons overlay. This frame is the share image: the Web Share API sends the image, not just text.
 
 ### 3.8 Title screen
-No logo over a static scene. Show the empty track with a ghost car doing one slow lap, laying rubber, with a thumb-shaped hint dragging left and right in time with the steering. Two seconds of that teaches the control better than text. Below it: "Tap to drive" and the best score. Nothing else.
+No logo over a static scene. Show the empty track with a ghost car doing one slow lap, laying rubber, with a thumb-shaped hint dragging left and right in time with the steering. Two seconds of that teaches the control better than text. Below it: "Tap to drive" and the best score. Nothing else. The logo carries a one-line tagline, and the foot sits over a bottom scrim so it reads wherever the ghost car is.
 
 ### 3.9 Audio
 One engine loop pitched by speed, a tyre squeal loop gained by drift angle, and three short SFX (chain bank, multiplier up, countdown). Web Audio API, unlocked on first touch. Muted by default until the player taps the sound toggle or starts a run (iOS autoplay rules).
@@ -183,6 +186,7 @@ Key decisions:
 - Initial load under 150 KB gzipped including audio.
 - No per-frame allocations in the physics step; particle pool pre-allocated.
 - Skid marks rendered to a persistent offscreen canvas rather than re-drawn each frame.
+- Grass is a tiled canvas pattern filled over the visible world each frame: one draw call on GPU raster, and the cheapest texture that still moves.
 
 ### 4.4 Mobile-specific checklist
 - `viewport-fit=cover`, safe-area insets for HUD on notched phones.
