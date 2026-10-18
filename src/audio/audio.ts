@@ -1,4 +1,9 @@
-import { claimPlaybackSession, pausePlaybackSession, resumePlaybackSession } from './session';
+import {
+  claimPlaybackSession,
+  pausePlaybackSession,
+  playbackSessionMode,
+  resumePlaybackSession,
+} from './session';
 import {
   bankRootHz,
   engineCutoff,
@@ -68,7 +73,8 @@ export class AudioEngine {
   /** One line of state for the debug readout. */
   describe(): string {
     if (!this.ctx) return 'audio: not unlocked';
-    return `audio: ${this.ctx.state} ${String(this.ctx.sampleRate)}Hz${this._muted ? ' muted' : ''}`;
+    const muted = this._muted ? ' muted' : '';
+    return `audio: ${this.ctx.state} ${String(this.ctx.sampleRate)}Hz${muted} session: ${playbackSessionMode()}`;
   }
 
   setMuted(muted: boolean): void {
