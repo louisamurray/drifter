@@ -69,11 +69,14 @@ Tunables live in one config object so tuning is a one-file job: `maxSpeed`, `acc
 - Run ends when a 60-second timer hits zero. Final score compared against local best.
 
 ### 2.6 Game loop & screens
-1. **Title** — ghost car laps the empty track with a thumb-drag hint (see section 3.8), "Tap to drive", best score, sound toggle.
+1. **Title** — ghost car laps the empty track with a thumb-drag hint (see section 3.8), "Tap to drive", best score, sound toggle, and a mode toggle: circuit or free drift (see section 2.7).
 2. **Countdown** — 3-2-1 overlaid on the track, car static.
 3. **Playing** — HUD: timer (top centre), score (top left), multiplier badge (top right, pulses when it increases), current chain score floating near the car.
 4. **Game over** — camera zooms out to show the whole track with the player's rubber on it, then final score, best score, "new best" callout, Restart button (large, bottom), Share button (Web Share API sending the zoomed-out frame as an image plus score text).
 5. **Pause** — resume / restart / sound. Reached from the small button under the timer.
+
+### 2.7 Free drift (open lot)
+A second course, chosen on the title screen and remembered: a rounded slab of asphalt about 1000 by 1400 world units, grass beyond its edge, and a faint painted ring in the middle to slide around. There is nothing to follow, so there is no road assist, no corner lift and no laps; only the thumbs steer the car. The 60-second run, chain, multiplier and scoring are unchanged, and leaving the slab ends a chain exactly as running wide does on the circuit. Each mode keeps its own best score. The title ghost on the lot chases a point round a figure of eight, pulling the handbrake through the direction changes, so the screen shows what the mode is for; a test keeps it on the asphalt and sliding for most of its run. The rubber canvas and the game-over overview are sized from the course's bounds, so the share frame is the whole slab with the run drawn on it.
 
 ---
 
@@ -160,9 +163,11 @@ src/
     loop.ts          fixed-timestep update (60 Hz) + variable render, rAF driven
     input.ts         touch/pointer/keyboard -> { throttle: 0..1, steer: -1..1 }
     state.ts         finite state machine: title | countdown | playing | paused | gameover
+    mode.ts          which course a run is on: track | free
   game/
     car.ts           physics step, drift detection
     track.ts         track definition, distance-to-centreline, lap detection
+    lot.ts           open lot geometry and its figure-eight title ghost
     scoring.ts       chain, multiplier, timer
     particles.ts     smoke, skid marks
   render/
