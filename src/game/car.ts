@@ -11,6 +11,8 @@ export interface CarState {
   heading: number;
   vx: number;
   vy: number;
+  /** Yaw rate in rad/s. Steering asks for a rate; the car's inertia lags it. */
+  yawRate: number;
   drifting: boolean;
 }
 
@@ -33,7 +35,7 @@ export interface Surface {
 export const ROAD: Surface = { accel: 1, drag: 1, grip: 1 };
 
 export function createCar(x = 0, y = 0, heading = -Math.PI / 2): CarState {
-  return { x, y, heading, vx: 0, vy: 0, drifting: false };
+  return { x, y, heading, vx: 0, vy: 0, yawRate: 0, drifting: false };
 }
 
 export function telemetry(car: CarState): CarTelemetry {
@@ -48,10 +50,13 @@ export function telemetry(car: CarState): CarTelemetry {
 
 /**
  * Arcade drift step. Velocity is split into forward and lateral parts along the
- * current heading. Steering yaws the heading, which converts forward speed into
- * lateral speed; grip damps lateral speed back out, which is what turns the car.
- * Grip falls with steer and speed so the rear breaks loose, and drops further
- * once drifting so the slide holds. Mutates and returns `car`.
+ * current heading. Steering asks for a yaw rate, which the car's inertia lags;
+ * yawing the heading converts forward speed into lateral speed, and grip damps
+ * lateral speed back out, which is what turns the car. Grip falls with steer
+ * and speed so the rear breaks loose, and drops further once drifting so the
+ * slide holds. While sliding the nose also eases back towards the direction
+ * of travel, so a released slide swings straight rather than stopping dead.
+ * Mutates and returns `car`.
  */
 export function stepCar(
   car: CarState,
@@ -94,16 +99,24 @@ export function stepCar(
   const rolling = Math.abs(vF);
   const speedRatio = Math.min(rolling / p.maxSpeed, 1);
 
-  // Yaw the heading. Velocity stays fixed in world space, so this converts some
-  // forward speed into lateral speed when we re-decompose below.
-  const authority =
-    Math.min(rolling / p.steerFullSpeed, 1) * (1 - p.highSpeedSteerLoss * speedRatio);
-  let yawRate = input.steer * p.steerRate * authority;
-  if (car.drifting) yawRate *= p.driftYawBoost;
-  if (Math.abs(input.steer) < 0.05) yawRate += assistYaw * Math.min(1, rolling / p.steerFullSpeed);
+  // Yaw. Steering, road assist and the self-aligning swing ask for a yaw rate
+  // and the car's inertia eases the actual rate towards it. Velocity stays
+  // fixed in world space, so yawing converts some forward speed into lateral
+  // speed when we re-decompose below.
+  const lowSpeed = Math.min(rolling / p.steerFullSpeed, 1);
+  const authority = lowSpeed * (1 - p.highSpeedSteerLoss * speedRatio);
+  let targetYaw = input.steer * p.steerRate * authority;
+  if (car.drifting) targetYaw *= p.driftYawBoost;
+  if (Math.abs(input.steer) < 0.05) {
+    // Hands off: road assist, and the nose eases back towards the direction
+    // of travel. While a side is held the player owns the nose.
+    const align = vF > 0 ? p.alignGain * Math.atan2(vL, vF) : 0;
+    targetYaw += (assistYaw + align) * lowSpeed;
+  }
+  car.yawRate += (targetYaw - car.yawRate) * (1 - Math.exp(-p.yawResponse * dt));
   const wx = fx * vF + -fy * vL;
   const wy = fy * vF + fx * vL;
-  car.heading += yawRate * dt;
+  car.heading += car.yawRate * dt;
   fx = Math.cos(car.heading);
   fy = Math.sin(car.heading);
   vF = wx * fx + wy * fy;

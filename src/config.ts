@@ -68,6 +68,19 @@ export const config = {
     /** Yaw multiplier while drifting so holding the slide feels intentional. */
     driftYawBoost: 1.15,
     /**
+     * Yaw inertia: rate (1/s) at which the yaw rate reaches what the steering
+     * asks for. The nose keeps swinging for a moment after a release. Slower
+     * than about 16 puts the naive thumb on the grass.
+     */
+    yawResponse: 20,
+    /**
+     * Self-aligning swing, in rad/s per radian of slip, with no steer held:
+     * the nose eases back towards the direction of travel, so a released
+     * slide settles with a swing rather than freezing. Off while a side is
+     * held, like road assist, so the player owns the nose.
+     */
+    alignGain: 0.7,
+    /**
      * Throttle cut in the second steering stage: a long hold slows the car as
      * it tightens the slide, so corners are makeable without the handbrake.
      * Full lock multiplies throttle by (1 - turnThrottleCut).

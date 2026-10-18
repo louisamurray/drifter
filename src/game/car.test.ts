@@ -84,6 +84,52 @@ describe('stepCar', () => {
   });
 });
 
+describe('yaw dynamics', () => {
+  it('lags the steering and keeps swinging for a moment after release', () => {
+    const car = run(180, 0);
+    stepCar(car, { throttle: 1, steer: 1, handbrake: false }, dt, p);
+    const first = car.yawRate;
+    run(30, 1, 1, car);
+    expect(first).toBeGreaterThan(0);
+    expect(car.yawRate).toBeGreaterThan(first * 2);
+    const heading = car.heading;
+    const held = car.yawRate;
+    stepCar(car, { throttle: 1, steer: 0, handbrake: false }, dt, p);
+    expect(car.heading).toBeGreaterThan(heading);
+    expect(car.yawRate).toBeGreaterThan(0);
+    expect(car.yawRate).toBeLessThan(held);
+  });
+
+  it('eases the nose towards the direction of travel when sliding with no steer held', () => {
+    const car = run(240, 0);
+    // Put the car into a slide with its nose pointed left of its velocity, steer released
+    car.heading -= 0.5;
+    car.yawRate = 0;
+    const noSwing = { ...car };
+    const slip = telemetry(car).slipAngle;
+    expect(slip).toBeGreaterThan(0.4);
+    for (let i = 0; i < 12; i++) {
+      stepCar(car, { throttle: 1, steer: 0, handbrake: false }, dt, p);
+      stepCar(noSwing, { throttle: 1, steer: 0, handbrake: false }, dt, { ...p, alignGain: 0 });
+    }
+    // The swing yaws the nose back towards the velocity; without it the heading only holds
+    expect(car.heading).toBeGreaterThan(noSwing.heading);
+    expect(noSwing.heading).toBeCloseTo(createCar().heading - 0.5);
+  });
+
+  it('leaves the nose to the player while a side is held', () => {
+    const car = run(240, 0);
+    car.heading -= 0.5;
+    car.yawRate = 0;
+    const noSwing = { ...car };
+    for (let i = 0; i < 12; i++) {
+      stepCar(car, { throttle: 1, steer: -1, handbrake: false }, dt, p);
+      stepCar(noSwing, { throttle: 1, steer: -1, handbrake: false }, dt, { ...p, alignGain: 0 });
+    }
+    expect(car.heading).toBeCloseTo(noSwing.heading);
+  });
+});
+
 describe('corner lift', () => {
   it('allows top speed on a straight and less through a tight corner', () => {
     expect(cornerSpeed(Infinity, p)).toBe(p.maxSpeed);
