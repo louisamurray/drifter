@@ -266,7 +266,7 @@ export class Hud {
     const how =
       this.scheme === 'thumb'
         ? 'Hold a side to steer, both for handbrake'
-        : 'Right thumb on the stick steers, left thumb holds the gas or pulls the handbrake';
+        : 'Point the stick where you want to go. Left thumb holds the gas or pulls the handbrake';
     this.titleSubEl.textContent = where + how;
     this.titleTagEl.textContent = `${this.scheme === 'thumb' ? 'One thumb' : 'Two thumbs'}. Sixty seconds.`;
   }
@@ -338,12 +338,13 @@ export class Hud {
     this.knobTravel = pad.stickRadius - KNOB_RADIUS;
   }
 
-  /** Lights the held pedals and slides the stick knob to the current steer. */
-  setPad(held: Readonly<Record<Zone, boolean>>, steer: number): void {
+  /** Lights the held pedals and moves the stick knob under the thumb. `stick` is -1..1 per axis. */
+  setPad(held: Readonly<Record<Zone, boolean>>, stick: { x: number; y: number }): void {
     for (const part of ['gas', 'brake', 'stick'] as const) {
       this.padParts[part].classList.toggle('held', held[part]);
     }
-    this.knobEl.style.setProperty('--knob-x', `${(steer * this.knobTravel).toFixed(1)}px`);
+    this.knobEl.style.setProperty('--knob-x', `${(stick.x * this.knobTravel).toFixed(1)}px`);
+    this.knobEl.style.setProperty('--knob-y', `${(stick.y * this.knobTravel).toFixed(1)}px`);
   }
 
   /** Faint column cues for new players, up to their first lap; `show` fades them in and out. */
@@ -375,7 +376,7 @@ const KNOB_RADIUS = 28;
 
 const HINT_LABEL: Record<ControlScheme, Record<Zone, string>> = {
   thumb: { left: 'hold', right: 'hold', brake: '', gas: '', stick: '' },
-  pedals: { left: '', right: '', brake: 'brake', gas: 'gas', stick: '◀ ▶' },
+  pedals: { left: '', right: '', brake: 'brake', gas: 'gas', stick: '◀▲▼▶' },
 };
 
 const ZONE_LABEL: Record<ControlScheme, Record<Zone, string>> = {

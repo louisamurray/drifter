@@ -8,14 +8,17 @@
  *
  * Two thumbs: controls in the bottom corners. The left thumb drives on two
  * pedals, gas in the corner and the handbrake beside it. The right thumb
- * steers on a stick: how far the thumb sits left or right of the stick's
- * centre is the steer, so it can be held part way. Nothing moves the car
- * but the gas, so speed is the player's to choose. Touches above the
- * control band are ignored in this scheme.
+ * points a stick where the car should go: the stick's direction on screen is
+ * the wanted heading, and the car steers towards it, harder the further the
+ * nose is from it. The camera does not rotate, so up is always up. Nothing
+ * moves the car but the gas, so speed is the player's to choose. Touches
+ * above the control band are ignored in this scheme.
  *
  * Keyboard: arrows or A/D steer, Up or W is the gas (two-thumb scheme only),
  * Space, Down or S is the handbrake, Escape or P pauses.
  */
+import { angleDelta } from './angle';
+
 export type ControlScheme = 'thumb' | 'pedals';
 
 export function isControlScheme(v: unknown): v is ControlScheme {
@@ -40,8 +43,10 @@ export interface PadLayout {
   /** Pedal diameter and the gap between the two pedals. */
   pedalSize: number;
   pedalGap: number;
-  /** Stick base radius. Full steer is the thumb this far from the centre. */
+  /** Stick base radius. The knob is drawn out to it. */
   stickRadius: number;
+  /** Heading error, in radians, at which the stick asks for full lock. */
+  stickFullAngle: number;
   /** Touches above this fraction of the screen height are not controls. */
   bandTop: number;
 }
@@ -74,8 +79,8 @@ export interface Keys {
 
 export const NO_KEYS: Keys = { left: false, right: false, brake: false, gas: false };
 
-/** Below this fraction of the stick radius the thumb counts as centred. */
-const STICK_DEADZONE = 0.08;
+/** Within this fraction of the stick radius the thumb counts as centred and asks for nothing. */
+const STICK_DEADZONE = 0.18;
 
 /**
  * Which control a touch at (x, y) lands on, for a screen of the given size,
@@ -97,23 +102,34 @@ export function zoneAt(
   return x < pad.inset + pad.pedalSize + pad.pedalGap / 2 ? 'gas' : 'brake';
 }
 
-/** Steer for a stick thumb `dx` px right of the stick centre. */
-export function stickSteer(dx: number, radius: number): number {
-  const raw = Math.max(-1, Math.min(1, dx / radius));
-  if (Math.abs(raw) < STICK_DEADZONE) return 0;
-  return Math.sign(raw) * ((Math.abs(raw) - STICK_DEADZONE) / (1 - STICK_DEADZONE));
+/**
+ * The heading a stick thumb asks for, from its offset (dx, dy) in screen px
+ * from the stick centre: 0 is right, increasing clockwise, like the car's
+ * heading. Null inside the deadzone.
+ */
+export function stickHeading(dx: number, dy: number, radius: number): number | null {
+  if (Math.hypot(dx, dy) < radius * STICK_DEADZONE) return null;
+  return Math.atan2(dy, dx);
+}
+
+/** Steer that turns `heading` towards `target` the short way: full lock from `fullAngle` of error. */
+export function headingSteer(heading: number, target: number, fullAngle: number): number {
+  return Math.max(-1, Math.min(1, angleDelta(heading, target) / fullAngle));
 }
 
 /**
  * Pure mapping from held zones (in press order), keys and the stick to
- * steer, handbrake and throttle. `stick` is the stick steer while a thumb is
- * on it, or null.
+ * steer, handbrake and throttle. `stick` is the heading the stick asks for
+ * while a thumb is on it, or null; `heading` is the car's, and `fullAngle`
+ * the error at which the stick asks for full lock.
  */
 export function resolveControls(
   heldInOrder: readonly Zone[],
   keys: Keys,
   scheme: ControlScheme = 'thumb',
   stick: number | null = null,
+  heading = 0,
+  fullAngle = 0.6,
 ): RawControls {
   const left = heldInOrder.includes('left');
   const right = heldInOrder.includes('right');
@@ -130,7 +146,9 @@ export function resolveControls(
   }
   const handbrake = heldInOrder.includes('brake') || keys.brake;
   const throttle = heldInOrder.includes('gas') || keys.gas ? 1 : 0;
-  if (stick !== null) return { steer: stick, analog: true, handbrake, throttle };
+  if (stick !== null) {
+    return { steer: headingSteer(heading, stick, fullAngle), analog: true, handbrake, throttle };
+  }
   return { steer, analog: false, handbrake, throttle };
 }
 
@@ -183,6 +201,7 @@ export function advanceControls(
 interface Touch {
   zone: Zone;
   x: number;
+  y: number;
 }
 
 export class TouchControls {
@@ -199,9 +218,21 @@ export class TouchControls {
   /** How touches map to zones. Changed from the title screen. */
   scheme: ControlScheme = 'thumb';
   /** Where the two-thumb controls sit. The HUD draws them from the same numbers. */
-  pad: PadLayout = { inset: 24, pedalSize: 80, pedalGap: 12, stickRadius: 70, bandTop: 0.55 };
-  /** Extra inset at the right edge, for the safe area; the HUD sets it. */
+  pad: PadLayout = {
+    inset: 24,
+    pedalSize: 80,
+    pedalGap: 12,
+    stickRadius: 70,
+    stickFullAngle: 0.6,
+    bandTop: 0.55,
+  };
+  /** Safe-area insets at the right and bottom edges, for the stick's centre; the game sets them. */
   safeRight = 0;
+  safeBottom = 0;
+  /** The car's heading, which the stick steers towards; the game sets it before each sample. */
+  carHeading = 0;
+  /** Where the stick thumb is, as a fraction of the radius in each axis, for drawing the knob. */
+  readonly stick = { x: 0, y: 0 };
 
   /** Called on Escape or P for desktop pause. */
   onPauseKey: (() => void) | null = null;
@@ -232,9 +263,13 @@ export class TouchControls {
     window.removeEventListener('blur', this.reset);
   }
 
-  /** Screen x of the stick's centre. */
-  stickCentreX(): number {
-    return window.innerWidth - this.safeRight - this.pad.inset - this.pad.stickRadius;
+  /** Screen position of the stick's centre. */
+  stickCentre(): { x: number; y: number } {
+    const r = this.pad.inset + this.pad.stickRadius;
+    return {
+      x: window.innerWidth - this.safeRight - r,
+      y: window.innerHeight - this.safeBottom - r,
+    };
   }
 
   /** Raw, unsmoothed controls right now. */
@@ -242,9 +277,20 @@ export class TouchControls {
     const k = this.keys;
     const touches = [...this.pointers.values()];
     const onStick = touches.find((t) => t.zone === 'stick');
-    const stick = onStick
-      ? stickSteer(onStick.x - this.stickCentreX(), this.pad.stickRadius)
-      : null;
+    let stick: number | null = null;
+    this.stick.x = 0;
+    this.stick.y = 0;
+    if (onStick) {
+      const c = this.stickCentre();
+      const r = this.pad.stickRadius;
+      const dx = onStick.x - c.x;
+      const dy = onStick.y - c.y;
+      stick = stickHeading(dx, dy, r);
+      // Knob stays inside the base however far the thumb wanders
+      const over = Math.max(1, Math.hypot(dx, dy) / r);
+      this.stick.x = dx / r / over;
+      this.stick.y = dy / r / over;
+    }
     return resolveControls(
       touches.map((t) => t.zone),
       {
@@ -255,6 +301,8 @@ export class TouchControls {
       },
       this.scheme,
       stick,
+      this.carHeading,
+      this.pad.stickFullAngle,
     );
   }
 
@@ -287,13 +335,16 @@ export class TouchControls {
       this.pad,
     );
     if (!zone) return;
-    this.pointers.set(e.pointerId, { zone, x: e.clientX });
+    this.pointers.set(e.pointerId, { zone, x: e.clientX, y: e.clientY });
     this.target.setPointerCapture(e.pointerId);
   };
 
   private readonly onMove = (e: PointerEvent): void => {
     const t = this.pointers.get(e.pointerId);
-    if (t) t.x = e.clientX;
+    if (t) {
+      t.x = e.clientX;
+      t.y = e.clientY;
+    }
   };
 
   private readonly onUp = (e: PointerEvent): void => {

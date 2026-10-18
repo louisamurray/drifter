@@ -3,8 +3,9 @@ import {
   advanceControls,
   NO_KEYS,
   rampSteer,
+  headingSteer,
   resolveControls,
-  stickSteer,
+  stickHeading,
   zoneAt,
   type InputState,
   type Keys,
@@ -59,19 +60,16 @@ describe('resolveControls with two thumbs', () => {
     expect(resolveControls([], keys({ gas: true }), 'pedals').throttle).toBe(1);
   });
 
-  it('steers by the stick while the other thumb holds the gas or the brake', () => {
-    expect(resolveControls(['gas', 'stick'], NO_KEYS, 'pedals', -0.4)).toEqual({
-      steer: -0.4,
-      analog: true,
-      handbrake: false,
-      throttle: 1,
-    });
-    expect(resolveControls(['stick', 'brake'], NO_KEYS, 'pedals', 1)).toEqual({
-      steer: 1,
-      analog: true,
-      handbrake: true,
-      throttle: 0,
-    });
+  it('steers towards the stick heading while the other thumb holds the gas or the brake', () => {
+    // Car pointing up (-PI/2), stick a little to the left of that: half lock left
+    const up = -Math.PI / 2;
+    const half = resolveControls(['gas', 'stick'], NO_KEYS, 'pedals', up - 0.3, up, 0.6);
+    expect(half.steer).toBeCloseTo(-0.5, 6);
+    expect(half).toMatchObject({ analog: true, handbrake: false, throttle: 1 });
+    // Stick pointing straight down: turn around, full lock, with the brake on
+    const back = resolveControls(['stick', 'brake'], NO_KEYS, 'pedals', Math.PI / 2, up, 0.6);
+    expect(Math.abs(back.steer)).toBe(1);
+    expect(back).toMatchObject({ analog: true, handbrake: true, throttle: 0 });
   });
 
   it('keeps the gas on through a handbrake pull', () => {
@@ -93,7 +91,14 @@ describe('resolveControls with two thumbs', () => {
   });
 });
 
-const pad: PadLayout = { inset: 24, pedalSize: 80, pedalGap: 12, stickRadius: 70, bandTop: 0.55 };
+const pad: PadLayout = {
+  inset: 24,
+  pedalSize: 80,
+  pedalGap: 12,
+  stickRadius: 70,
+  stickFullAngle: 0.6,
+  bandTop: 0.55,
+};
 
 describe('zoneAt', () => {
   it('splits the screen in halves for one thumb, at any height', () => {
@@ -117,19 +122,31 @@ describe('zoneAt', () => {
   });
 });
 
-describe('stickSteer', () => {
-  it('is centred within the deadzone and full at the radius', () => {
-    expect(stickSteer(0, 70)).toBe(0);
-    expect(stickSteer(4, 70)).toBe(0);
-    expect(stickSteer(70, 70)).toBe(1);
-    expect(stickSteer(-120, 70)).toBe(-1);
+describe('stickHeading', () => {
+  it('asks for nothing inside the deadzone', () => {
+    expect(stickHeading(0, 0, 70)).toBeNull();
+    expect(stickHeading(8, 8, 70)).toBeNull();
   });
 
-  it('is proportional between, with no step at the deadzone edge', () => {
-    expect(stickSteer(70 * 0.08 + 0.01, 70)).toBeCloseTo(0, 2);
-    expect(stickSteer(35, 70)).toBeGreaterThan(0.4);
-    expect(stickSteer(35, 70)).toBeLessThan(0.5);
-    expect(stickSteer(-35, 70)).toBeCloseTo(-stickSteer(35, 70), 6);
+  it('reads the direction on screen, however far the thumb is', () => {
+    expect(stickHeading(0, -40, 70)).toBeCloseTo(-Math.PI / 2, 6);
+    expect(stickHeading(200, 0, 70)).toBeCloseTo(0, 6);
+    expect(stickHeading(0, 30, 70)).toBeCloseTo(Math.PI / 2, 6);
+    expect(stickHeading(-30, 0, 70)).toBeCloseTo(Math.PI, 6);
+  });
+});
+
+describe('headingSteer', () => {
+  it('is zero on heading, proportional nearby and full lock from the full angle', () => {
+    expect(headingSteer(1, 1, 0.6)).toBe(0);
+    expect(headingSteer(1, 1.3, 0.6)).toBeCloseTo(0.5, 6);
+    expect(headingSteer(1, 1 - 0.3, 0.6)).toBeCloseTo(-0.5, 6);
+    expect(headingSteer(1, 2, 0.6)).toBe(1);
+  });
+
+  it('turns the short way across the wrap', () => {
+    expect(headingSteer(Math.PI - 0.1, -Math.PI + 0.1, 0.6)).toBeCloseTo(0.2 / 0.6, 6);
+    expect(headingSteer(-Math.PI + 0.1, Math.PI - 0.1, 0.6)).toBeCloseTo(-0.2 / 0.6, 6);
   });
 });
 

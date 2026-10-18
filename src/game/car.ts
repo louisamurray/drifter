@@ -1,5 +1,8 @@
 import type { PhysicsConfig } from '../config';
+import { angleDelta } from '../core/angle';
 import type { InputState } from '../core/input';
+
+export { angleDelta };
 
 export interface CarState {
   x: number;
@@ -117,14 +120,6 @@ export function stepCar(
   car.y += car.vy * dt;
 
   return car;
-}
-
-/** Shortest signed angle from `a` to `b`. */
-export function angleDelta(a: number, b: number): number {
-  let d = (b - a) % (Math.PI * 2);
-  if (d > Math.PI) d -= Math.PI * 2;
-  if (d < -Math.PI) d += Math.PI * 2;
-  return d;
 }
 
 /**

@@ -96,8 +96,10 @@ input.scheme = scheme;
 input.pad = config.input.pad;
 hud.setPadLayout(config.input.pad);
 input.safeRight = safeArea('--sar');
+input.safeBottom = safeArea('--sab');
 window.addEventListener('resize', () => {
   input.safeRight = safeArea('--sar');
+  input.safeBottom = safeArea('--sab');
 });
 
 function startFor(m: GameMode): { x: number; y: number; heading: number } {
@@ -426,6 +428,7 @@ function update(dt: number): void {
     }
     case 'playing': {
       const manual = !debugState.autopilot && scheme === 'pedals';
+      input.carHeading = car.heading;
       const ctl = debugState.autopilot
         ? ghostInput(dt, debugState.aggression)
         : input.sample(dt, config.input.steer, config.input.throttleSeconds);
@@ -433,7 +436,7 @@ function update(dt: number): void {
       // Hold cues stay up for a new player until their first lap, or first banked chain on the lot
       const learning = best === 0 && (mode === 'track' ? laps.laps === 0 : score.score === 0);
       hud.setZones(learning, input.held);
-      hud.setPad(input.held, input.state.steer);
+      hud.setPad(input.held, input.stick);
       hud.setOffRoad(offTrack);
       break;
     }

@@ -31,14 +31,17 @@ export const config = {
     throttleSeconds: 0.15,
     /**
      * Two-thumb controls in the bottom corners, in CSS px: pedals bottom left
-     * (gas in the corner, handbrake beside it), stick bottom right. Touches
-     * above `bandTop` of the screen height are not controls.
+     * (gas in the corner, handbrake beside it), stick bottom right. The stick
+     * points where the car should go; the nose asks for full lock once it is
+     * `stickFullAngle` radians off that. Touches above `bandTop` of the
+     * screen height are not controls.
      */
     pad: {
       inset: 24,
       pedalSize: 80,
       pedalGap: 12,
       stickRadius: 70,
+      stickFullAngle: 0.6,
       bandTop: 0.55,
     },
   },

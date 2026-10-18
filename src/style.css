@@ -213,8 +213,8 @@ body {
 .hint-stick {
   width: 104px;
   border-radius: 30px;
-  letter-spacing: 0.5em;
-  text-indent: 0.5em;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
 }
 .controls-toggle {
   display: flex;
@@ -403,7 +403,7 @@ body {
   border: 2px solid var(--cream);
   background: rgba(232, 220, 196, 0.45);
   box-sizing: border-box;
-  transform: translateX(var(--knob-x, 0px));
+  transform: translate(var(--knob-x, 0px), var(--knob-y, 0px));
   transition: transform 0.05s linear;
 }
 .stick.held .stick-knob {
