@@ -1,5 +1,6 @@
 import { config } from '../config';
 import type { CarState, CarTelemetry } from '../game/car';
+import type { Lot } from '../game/lot';
 import type { Track } from '../game/track';
 import type { LapState } from '../game/laps';
 import type { Shake, SmokePool } from '../game/particles';
@@ -162,6 +163,36 @@ function drawStartLine(ctx: CanvasRenderingContext2D, track: Track): void {
     }
   }
   ctx.restore();
+}
+
+/**
+ * The open lot: a rounded slab of asphalt drawn like the road, with the same
+ * cream edge and soft shadow, and a faint painted ring in the middle to slide
+ * around. Nothing else, so the rubber stays the picture.
+ */
+export function drawLot(ctx: CanvasRenderingContext2D, lot: Lot): void {
+  const p = config.palette;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  roundedRect(ctx, -lot.width / 2, -lot.height / 2, lot.width, lot.height, lot.corner);
+  ctx.strokeStyle = p.trackShadow;
+  ctx.lineWidth = EDGE + 10;
+  ctx.stroke();
+  ctx.strokeStyle = p.edgeLine;
+  ctx.lineWidth = EDGE;
+  ctx.stroke();
+  ctx.fillStyle = p.asphalt;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(0, 0, lot.ring, 0, Math.PI * 2);
+  ctx.setLineDash([14, 14]);
+  ctx.strokeStyle = p.edgeLine;
+  ctx.lineWidth = 4;
+  ctx.globalAlpha = 0.35;
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
 }
 
 const CAR_LENGTH = 40;

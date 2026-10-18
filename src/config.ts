@@ -96,6 +96,15 @@ export const config = {
     /** Scale applied to the track's control points. */
     scale: 1,
   },
+  lot: {
+    /** Asphalt size of the free drift lot in world px, centred on the origin. */
+    width: 1000,
+    height: 1400,
+    /** Corner radius of the asphalt. */
+    corner: 220,
+    /** Radius of the painted skidpad ring in the middle. */
+    ring: 230,
+  },
   offTrack: {
     /** Multipliers applied to physics while off the road. */
     accel: 0.5,
