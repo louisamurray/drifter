@@ -1,0 +1,24 @@
+flowchart LR
+  baseline["0. Capture handling baseline"] --> prototype["1. Force model and untimed practice"]
+  prototype --> handlingGate{"Stable and controllable?"}
+  handlingGate -->|"Revise"| handlingTune["Tune model and unit conversion"]
+  handlingTune --> prototype
+  handlingGate -->|"Pass"| lessons["2. Inputs, assists and three lessons"]
+  lessons --> learningGate{"Players can repeat and explain slides?"}
+  learningGate -->|"Revise"| learningTune["Tune controls, cues and lessons"]
+  learningTune --> lessons
+  learningGate -->|"Pass"| sequence["3. One scored corner sequence"]
+  sequence --> scoreGate{"Rewards control and explains losses?"}
+  scoreGate -->|"Revise"| scoringTune["Tune zones, transitions and results"]
+  scoringTune --> sequence
+  scoreGate -->|"Pass"| release["4. Compatibility and browser release checks"]
+  release --> releaseGate{"Regression and playtest gates pass?"}
+  releaseGate -->|"Revise"| releaseFix["Resolve release blockers"]
+  releaseFix --> release
+  releaseGate -->|"Pass"| launch["Release core experience"]
+  launch -.->|"Validate later"| expansion["Ghosts, medals and more courses"]
+  style handlingGate fill:#FFECBD,stroke:#FFC943
+  style learningGate fill:#FFECBD,stroke:#FFC943
+  style scoreGate fill:#FFECBD,stroke:#FFC943
+  style releaseGate fill:#FFECBD,stroke:#FFC943
+  style launch fill:#CDF4D3,stroke:#66D575
