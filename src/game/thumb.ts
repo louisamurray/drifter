@@ -1,6 +1,7 @@
 import { config } from '../config';
 import {
   advanceControls,
+  NO_KEYS,
   resolveControls,
   type InputState,
   type Side,
@@ -153,7 +154,7 @@ export function driveThumb(
 
   for (let i = 0; i < total; i++) {
     const side = thumb(car);
-    advanceControls(input, resolveControls(side ? [side] : [], false, false, false), dt, ramp);
+    advanceControls(input, resolveControls(side ? [side] : [], NO_KEYS), dt, ramp);
     const assist = assistYaw(car.heading, roadHeading, car.drifting, offTrack, p);
     const forward = telemetry(car).forwardSpeed;
     const lift = cornerLift(

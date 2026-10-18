@@ -27,6 +27,8 @@ export const config = {
       stage2Seconds: 0.5,
       releaseSeconds: 0.1,
     },
+    /** Seconds for a pressed gas pedal to reach full throttle in the two-thumb scheme. */
+    throttleSeconds: 0.15,
   },
   physics: {
     /** World units are pixels at zoom 1. */

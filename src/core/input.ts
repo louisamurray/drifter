@@ -1,13 +1,31 @@
 /**
- * Hold-left, hold-right controls.
+ * Touch and keyboard controls, in one of two schemes.
  *
- * Touching the left half of the screen steers left at full lock, the right
- * half steers right. Holding both is the handbrake; steer stays with whichever
- * side was pressed first so a second thumb adds the handbrake without changing
- * direction. The car accelerates by itself. Keyboard: arrows or A/D steer,
- * Space or Down is the handbrake, Escape or P pauses.
+ * One thumb: touching the left half of the screen steers left at full lock,
+ * the right half steers right. Holding both is the handbrake; steer stays
+ * with whichever side was pressed first so a second thumb adds the handbrake
+ * without changing direction. The car accelerates by itself.
+ *
+ * Two thumbs: four equal columns. The outer left column steers left and the
+ * inner one right; the inner right column is the handbrake and the outer
+ * right is the gas. Nothing moves the car but the gas, so speed is the
+ * player's to choose.
+ *
+ * Keyboard: arrows or A/D steer, Up or W is the gas (two-thumb scheme only),
+ * Space, Down or S is the handbrake, Escape or P pauses.
  */
+export type ControlScheme = 'thumb' | 'pedals';
+
+/** A steering column; the only zones in the one-thumb scheme. */
 export type Side = 'left' | 'right';
+
+export type Zone = Side | 'brake' | 'gas';
+
+/** Touch columns from the left edge of the screen, per scheme. */
+export const ZONES: Record<ControlScheme, readonly Zone[]> = {
+  thumb: ['left', 'right'],
+  pedals: ['left', 'right', 'brake', 'gas'],
+};
 
 /** Normalised control state the game reads each physics step. */
 export interface InputState {
@@ -22,24 +40,48 @@ export interface RawControls {
   /** -1, 0 or 1. */
   steer: number;
   handbrake: boolean;
+  /** 0 or 1. Automatic in the one-thumb scheme: on unless the handbrake is. */
+  throttle: number;
 }
 
-/** Pure mapping from held sides (in press order) and keys to steer and handbrake. */
+export interface Keys {
+  left: boolean;
+  right: boolean;
+  brake: boolean;
+  gas: boolean;
+}
+
+export const NO_KEYS: Keys = { left: false, right: false, brake: false, gas: false };
+
+/** Which column a touch at `xFraction` (0 at the left edge, 1 at the right) lands in. */
+export function zoneAt(xFraction: number, scheme: ControlScheme): Zone {
+  const zones = ZONES[scheme];
+  const i = Math.min(zones.length - 1, Math.max(0, Math.floor(xFraction * zones.length)));
+  return zones[i] ?? 'left';
+}
+
+/** Pure mapping from held zones (in press order) and keys to steer, handbrake and throttle. */
 export function resolveControls(
-  heldInOrder: readonly Side[],
-  keyLeft: boolean,
-  keyRight: boolean,
-  keyBrake: boolean,
+  heldInOrder: readonly Zone[],
+  keys: Keys,
+  scheme: ControlScheme = 'thumb',
 ): RawControls {
   const left = heldInOrder.includes('left');
   const right = heldInOrder.includes('right');
+  let steer: number;
   if (left || right) {
-    const first = heldInOrder[0];
-    const steer = first === 'left' ? -1 : 1;
-    return { steer, handbrake: (left && right) || keyBrake };
+    const first = heldInOrder.find((z) => z === 'left' || z === 'right');
+    steer = first === 'left' ? -1 : 1;
+  } else {
+    steer = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
   }
-  const steer = (keyRight ? 1 : 0) - (keyLeft ? 1 : 0);
-  return { steer, handbrake: keyBrake };
+  if (scheme === 'thumb') {
+    const handbrake = (left && right) || keys.brake;
+    return { steer, handbrake, throttle: handbrake ? 0 : 1 };
+  }
+  const handbrake = heldInOrder.includes('brake') || keys.brake;
+  const throttle = heldInOrder.includes('gas') || keys.gas ? 1 : 0;
+  return { steer, handbrake, throttle };
 }
 
 export interface SteerRamp {
@@ -67,30 +109,37 @@ export function rampSteer(current: number, target: number, dt: number, r: SteerR
 
 /**
  * Advance the smoothed state by one physics step from raw controls. Throttle
- * is automatic: full unless the handbrake is held. Mutates and returns `state`.
+ * rises over `throttleSeconds` (instantly when 0) and drops at once, so a
+ * pressed pedal eases in and a released one lets go. Mutates and returns `state`.
  */
 export function advanceControls(
   state: InputState,
   raw: RawControls,
   dt: number,
   ramp: SteerRamp,
+  throttleSeconds = 0,
 ): InputState {
   state.steer = rampSteer(state.steer, raw.steer, dt, ramp);
   state.handbrake = raw.handbrake;
-  state.throttle = raw.handbrake ? 0 : 1;
+  state.throttle =
+    throttleSeconds > 0 && raw.throttle > state.throttle
+      ? Math.min(raw.throttle, state.throttle + dt / throttleSeconds)
+      : raw.throttle;
   return state;
 }
 
 export class TouchControls {
   /** Smoothed state, updated by `sample`. */
   readonly state: InputState = { throttle: 0, steer: 0, handbrake: false };
-  /** Which sides are currently held, for on-screen cues. */
-  readonly held = { left: false, right: false };
+  /** Which zones are currently held, for on-screen cues. */
+  readonly held: Record<Zone, boolean> = { left: false, right: false, brake: false, gas: false };
+  /** How touches map to zones. Changed from the title screen. */
+  scheme: ControlScheme = 'thumb';
 
   /** Called on Escape or P for desktop pause. */
   onPauseKey: (() => void) | null = null;
 
-  private readonly pointers = new Map<number, Side>();
+  private readonly pointers = new Map<number, Zone>();
   private readonly keys = new Set<string>();
 
   constructor(private readonly target: HTMLElement) {
@@ -116,19 +165,24 @@ export class TouchControls {
 
   /** Raw, unsmoothed controls right now. */
   raw(): RawControls {
+    const k = this.keys;
     return resolveControls(
       [...this.pointers.values()],
-      this.keys.has('arrowleft') || this.keys.has('a'),
-      this.keys.has('arrowright') || this.keys.has('d'),
-      this.keys.has(' ') || this.keys.has('arrowdown') || this.keys.has('s'),
+      {
+        left: k.has('arrowleft') || k.has('a'),
+        right: k.has('arrowright') || k.has('d'),
+        brake: k.has(' ') || k.has('arrowdown') || k.has('s'),
+        gas: k.has('arrowup') || k.has('w'),
+      },
+      this.scheme,
     );
   }
 
   /** Advance the smoothed state by one physics step. */
-  sample(dt: number, ramp: SteerRamp): InputState {
-    advanceControls(this.state, this.raw(), dt, ramp);
-    this.held.left = [...this.pointers.values()].includes('left');
-    this.held.right = [...this.pointers.values()].includes('right');
+  sample(dt: number, ramp: SteerRamp, throttleSeconds = 0): InputState {
+    advanceControls(this.state, this.raw(), dt, ramp, throttleSeconds);
+    const zones = [...this.pointers.values()];
+    for (const z of Object.keys(this.held) as Zone[]) this.held[z] = zones.includes(z);
     return this.state;
   }
 
@@ -139,14 +193,12 @@ export class TouchControls {
     this.state.steer = 0;
     this.state.handbrake = false;
     this.state.throttle = 0;
-    this.held.left = false;
-    this.held.right = false;
+    for (const z of Object.keys(this.held) as Zone[]) this.held[z] = false;
   };
 
   private readonly onDown = (e: PointerEvent): void => {
     e.preventDefault();
-    const side: Side = e.clientX < window.innerWidth / 2 ? 'left' : 'right';
-    this.pointers.set(e.pointerId, side);
+    this.pointers.set(e.pointerId, zoneAt(e.clientX / window.innerWidth, this.scheme));
     this.target.setPointerCapture(e.pointerId);
   };
 
@@ -167,7 +219,7 @@ export class TouchControls {
   };
 }
 
-const KEYS = new Set(['arrowleft', 'arrowright', 'arrowdown', 'a', 'd', 's', ' ']);
+const KEYS = new Set(['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'a', 'd', 'w', 's', ' ']);
 
 function preventDefault(e: Event): void {
   e.preventDefault();
