@@ -150,8 +150,8 @@ export const config = {
     zoomFast: 0.85,
     /** Zoom smoothing rate (1/s). */
     zoomRate: 2.5,
-    /** Fraction of the screen the whole track fills on the game-over overview. */
-    overviewFill: 0.8,
+    /** Fraction of the free band the whole track fills on the game-over overview. */
+    overviewFill: 0.86,
   },
   palette: {
     asphalt: '#1c2230',

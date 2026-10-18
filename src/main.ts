@@ -338,7 +338,8 @@ function update(dt: number): void {
     }
     case 'gameover': {
       Object.assign(prev, car);
-      const o = trackOverview(track, viewport.width, viewport.height);
+      const band = hud.overviewBand();
+      const o = trackOverview(track, viewport.width, viewport.height, band.top, band.bottom);
       moveCameraTo(camera, o.x, o.y, o.zoom, dt);
       break;
     }

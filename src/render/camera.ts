@@ -39,8 +39,18 @@ export interface Overview {
   zoom: number;
 }
 
-/** Camera target that fits the whole track on screen, for the game-over frame. */
-export function trackOverview(track: Track, viewWidth: number, viewHeight: number): Overview {
+/**
+ * Camera target that fits the whole track inside a horizontal band of the
+ * screen, for the game-over frame. `bandTop` and `bandBottom` are screen
+ * pixels; the overlay's score sits above the band and its buttons below it.
+ */
+export function trackOverview(
+  track: Track,
+  viewWidth: number,
+  viewHeight: number,
+  bandTop = 0,
+  bandBottom = viewHeight,
+): Overview {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -55,8 +65,11 @@ export function trackOverview(track: Track, viewWidth: number, viewHeight: numbe
   const w = maxX - minX + pad * 2;
   const h = maxY - minY + pad * 2;
   const fill = config.camera.overviewFill;
-  const zoom = Math.min((viewWidth * fill) / w, (viewHeight * fill) / h);
-  // The world origin on screen sits at carScreenY, so offset the centre to land mid-screen
-  const screenCentreOffset = (config.render.carScreenY - 0.5) * viewHeight;
-  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 + screenCentreOffset / zoom, zoom };
+  const bandHeight = Math.max(1, bandBottom - bandTop);
+  const zoom = Math.min((viewWidth * fill) / w, (bandHeight * fill) / h);
+  // The world origin lands at carScreenY on screen; shift so the track centre
+  // sits in the middle of the band instead
+  const bandCentre = (bandTop + bandBottom) / 2;
+  const screenOffset = bandCentre - config.render.carScreenY * viewHeight;
+  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 - screenOffset / zoom, zoom };
 }

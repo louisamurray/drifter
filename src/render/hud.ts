@@ -25,6 +25,8 @@ export class Hud {
   private readonly finalBestEl: HTMLElement;
   private readonly newBestEl: HTMLElement;
   private readonly countdownEl: HTMLElement;
+  private readonly overTopEl: HTMLElement;
+  private readonly overActionsEl: HTMLElement;
   private readonly shareBtn: HTMLButtonElement;
 
   onStart: (() => void) | null = null;
@@ -125,6 +127,8 @@ export class Hud {
     over.addEventListener('click', (e) => {
       this.dispatch(e);
     });
+    this.overTopEl = must(over.querySelector('.over-top'));
+    this.overActionsEl = must(over.querySelector('.over-actions'));
     this.finalScoreEl = must(over.querySelector('.over-score'));
     this.finalBestEl = must(over.querySelector('.over-best'));
     this.newBestEl = must(over.querySelector('.over-newbest'));
@@ -198,6 +202,13 @@ export class Hud {
     this.zonesEl.classList.toggle('show', show);
     this.zoneLeft.classList.toggle('held', left);
     this.zoneRight.classList.toggle('held', right);
+  }
+
+  /** Screen band between the game-over score and its buttons, where the track overview fits. */
+  overviewBand(): { top: number; bottom: number } {
+    const top = this.overTopEl.getBoundingClientRect().bottom;
+    const bottom = this.overActionsEl.getBoundingClientRect().top;
+    return bottom > top ? { top, bottom } : { top: 0, bottom: window.innerHeight };
   }
 
   setGameOver(score: number, best: number, isNewBest: boolean): void {
