@@ -189,6 +189,7 @@ Key decisions:
 - Prevent double-tap zoom, pull-to-refresh, long-press callout, text selection.
 - Handle `resize` and `orientationchange` by re-fitting the canvas.
 - Audio context resume on first user gesture.
+- The ringer-switch workaround must not create a media element where the Audio Session API exists (iOS 17+). Brave on iOS offers to add any media element to its Playlist on a long press, which is the game's only gesture. The debug readout shows which path is in use.
 - Test iOS Safari (most restrictive) first, then Chrome Android.
 - Browser toolbars sit at the bottom of an iPhone screen (Safari, Brave), under a portrait thumb. A long press there opens the browser's own menus and the page never sees it. Mitigations: hold cues sit mid-screen and stay until the first lap, and in a browser on a touch device the title screen suggests Add to Home Screen, which launches with no toolbar. A web manifest and icons ship for that; the service worker is still milestone 6.
 
