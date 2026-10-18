@@ -69,6 +69,19 @@ describe('stepCar', () => {
     run(60 * 20, 0, 0, car);
     expect(telemetry(car).speed).toBe(0);
   });
+
+  it('keeps its momentum when spun to face backwards', () => {
+    const car = run(180, 0);
+    const before = telemetry(car).speed;
+    // Turn the car round on the spot: velocity is unchanged, the nose now points the other way
+    car.heading += Math.PI;
+    stepCar(car, { throttle: 0, steer: 0, handbrake: false }, dt, p);
+    expect(telemetry(car).forwardSpeed).toBeLessThan(0);
+    expect(telemetry(car).speed).toBeGreaterThan(before * 0.95);
+    // The gas brings it to a halt and then forwards again, rather than stopping it dead
+    run(240, 0, 1, car);
+    expect(telemetry(car).forwardSpeed).toBeGreaterThan(0);
+  });
 });
 
 describe('corner lift', () => {

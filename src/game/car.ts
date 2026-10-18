@@ -78,7 +78,8 @@ export function stepCar(
     car.drifting = absLateral > p.driftEnterLateral && vF > p.driftMinForward;
   }
 
-  // Longitudinal
+  // Longitudinal. Forward speed may go negative through a spin: the car keeps
+  // its momentum and rolls backwards for a moment instead of losing it.
   const accel = (car.drifting ? p.accel * p.driftAccelBoost : p.accel) * surface.accel;
   const turn = Math.max(0, Math.abs(input.steer) - p.turnThrottleFrom) / (1 - p.turnThrottleFrom);
   const throttle = input.throttle * (1 - p.turnThrottleCut * Math.min(1, turn)) * (1 - lift);
@@ -89,15 +90,17 @@ export function stepCar(
     const roll = p.rolling * dt;
     vF = Math.abs(vF) <= roll ? 0 : vF - Math.sign(vF) * roll;
   }
-  vF = Math.max(0, Math.min(vF, p.maxSpeed));
-  const speedRatio = Math.min(vF / p.maxSpeed, 1);
+  vF = Math.max(-p.maxSpeed, Math.min(vF, p.maxSpeed));
+  const rolling = Math.abs(vF);
+  const speedRatio = Math.min(rolling / p.maxSpeed, 1);
 
   // Yaw the heading. Velocity stays fixed in world space, so this converts some
   // forward speed into lateral speed when we re-decompose below.
-  const authority = Math.min(vF / p.steerFullSpeed, 1) * (1 - p.highSpeedSteerLoss * speedRatio);
+  const authority =
+    Math.min(rolling / p.steerFullSpeed, 1) * (1 - p.highSpeedSteerLoss * speedRatio);
   let yawRate = input.steer * p.steerRate * authority;
   if (car.drifting) yawRate *= p.driftYawBoost;
-  if (Math.abs(input.steer) < 0.05) yawRate += assistYaw * Math.min(1, vF / p.steerFullSpeed);
+  if (Math.abs(input.steer) < 0.05) yawRate += assistYaw * Math.min(1, rolling / p.steerFullSpeed);
   const wx = fx * vF + -fy * vL;
   const wy = fy * vF + fx * vL;
   car.heading += yawRate * dt;
