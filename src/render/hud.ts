@@ -5,7 +5,7 @@ import {
   type PadLayout,
   type Zone,
 } from '../core/input';
-import { isGameMode, type GameMode } from '../core/mode';
+import { GAME_MODES, isGameMode, type GameMode } from '../core/mode';
 import type { GameState } from '../core/state';
 
 /**
@@ -48,6 +48,7 @@ export class Hud {
   private readonly overActionsEl: HTMLElement;
   private readonly shareBtn: HTMLButtonElement;
   private mode: GameMode = 'track';
+  private bests: Record<GameMode, number> = { track: 0, free: 0 };
   private scheme: ControlScheme = 'thumb';
 
   onStart: (() => void) | null = null;
@@ -227,6 +228,7 @@ export class Hud {
     this.mode = mode;
     for (const chip of this.modeChips) chip.classList.toggle('on', chip.dataset.mode === mode);
     this.refreshTitleText();
+    this.renderBests();
   }
 
   /**
@@ -277,8 +279,27 @@ export class Hud {
     }
   }
 
-  setTitleBest(best: number): void {
-    this.titleBestEl.textContent = best > 0 ? `Best ${fmtScore(best)}` : '';
+  /**
+   * Best score per mode, listed in the title foot so it is plain that each
+   * mode keeps its own: the chosen mode's first and brightest, the other
+   * dimmed, and a mode with no score yet left out.
+   */
+  setBests(bests: Readonly<Record<GameMode, number>>): void {
+    this.bests = { ...bests };
+    this.renderBests();
+  }
+
+  private renderBests(): void {
+    const order: GameMode[] = [this.mode, ...GAME_MODES.filter((m) => m !== this.mode)];
+    this.titleBestEl.replaceChildren(
+      ...order
+        .filter((m) => this.bests[m] > 0)
+        .map((m) => {
+          const row = el('div', m === this.mode ? 'best-row on' : 'best-row');
+          row.textContent = `${MODE_NAME[m]} best ${fmtScore(this.bests[m])}`;
+          return row;
+        }),
+    );
   }
 
   /** Shown in a browser on a touch device, where its toolbar sits under the thumb. */
@@ -362,7 +383,7 @@ export class Hud {
 
   setGameOver(score: number, best: number, isNewBest: boolean): void {
     this.finalScoreEl.textContent = fmtScore(score);
-    this.finalBestEl.textContent = `Best ${fmtScore(best)}`;
+    this.finalBestEl.textContent = `${MODE_NAME[this.mode]} best ${fmtScore(best)}`;
     this.newBestEl.classList.toggle('show', isNewBest);
   }
 
@@ -373,6 +394,9 @@ export class Hud {
 
 /** Half the stick knob's CSS size; the knob travels the rest of the radius. */
 const KNOB_RADIUS = 28;
+
+/** The courses as the mode chips name them. */
+const MODE_NAME: Record<GameMode, string> = { track: 'Circuit', free: 'Free drift' };
 
 const HINT_LABEL: Record<ControlScheme, Record<Zone, string>> = {
   thumb: { left: 'hold', right: 'hold', brake: '', gas: '', stick: '' },

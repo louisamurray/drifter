@@ -134,7 +134,8 @@ let offTrack = false;
 let roadHeading = start.heading;
 let trackIndex = 0;
 let popups: Popup[] = [];
-let best = loadBest(mode);
+/** Best score per mode. Each keeps its own, and the title lists both. */
+const bests: Record<GameMode, number> = { track: loadBest('track'), free: loadBest('free') };
 let newBest = false;
 let countdownLeft = 0;
 let lastTick = 0;
@@ -177,7 +178,7 @@ function setState(next: GameState): void {
   if (from === 'paused' && next !== 'paused') audio.resume();
   if (next === 'title') {
     resetRun();
-    hud.setTitleBest(best);
+    hud.setBests(bests);
     audio.stopEngine();
   } else if (next === 'countdown') {
     resetRun();
@@ -191,12 +192,12 @@ function setState(next: GameState): void {
   } else if (next === 'gameover') {
     input.reset();
     audio.stopEngine(1.2);
-    newBest = score.score > best;
+    newBest = score.score > bests[mode];
     if (newBest) {
-      best = score.score;
-      saveBest(mode, best);
+      bests[mode] = score.score;
+      saveBest(mode, score.score);
     }
-    hud.setGameOver(score.score, best, newBest);
+    hud.setGameOver(score.score, bests[mode], newBest);
   }
 }
 
@@ -217,7 +218,6 @@ function setMode(next: GameMode): void {
   saveMode(mode);
   start = startFor(mode);
   skids = skidsFor(mode);
-  best = loadBest(mode);
   hud.setMode(mode);
   setState('title');
 }
@@ -439,7 +439,8 @@ function update(dt: number): void {
         : input.sample(dt, config.input.steer, config.input.throttleSeconds);
       stepPhysics(dt, ctl, manual, manual && input.held.stick);
       // Hold cues stay up for a new player until their first lap, or first banked chain on the lot
-      const learning = best === 0 && (mode === 'track' ? laps.laps === 0 : score.score === 0);
+      const learning =
+        bests[mode] === 0 && (mode === 'track' ? laps.laps === 0 : score.score === 0);
       hud.setZones(learning, input.held);
       hud.setPad(input.held, input.stick);
       hud.setOffRoad(offTrack);
