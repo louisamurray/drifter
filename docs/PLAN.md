@@ -113,7 +113,7 @@ One family: a wide or extended grotesk with a heavy weight and **tabular figures
 - Off the road the screen edges darken. The vignette is a DOM layer the compositor fades, not a canvas gradient: shading one every frame cost a third of the frame budget on a software rasteriser.
 
 ### 3.6 Car and track
-- Car is roughly 36 to 44px long at phone scale. A detailed sprite becomes mud at that size. Use a two-tone silhouette with a lighter roof so heading is unambiguous, and rear wheels drawn slightly wider so smoke and rubber visibly come from them.
+- Car is roughly 36 to 44px long at phone scale. A detailed sprite becomes mud at that size. Use a two-tone silhouette with a lighter roof so heading is unambiguous, and rear wheels drawn slightly wider so smoke and rubber visibly come from them. The silhouette tapers to the nose, with dark glass either side of the roof, front wheels that turn with the steer input, a rear wing, and tail lights that glow on the handbrake or a corner lift. In a slide the body shifts a pixel or two on its wheels for a hint of roll.
 - A soft shadow outside the edge line and a drop shadow under the car lift them off the grass. Chain text and score pops carry a dark halo so they read over cream and olive alike.
 - Track has one strong, consistent edge line. Rumble strips appear only on the two hardest corners, which doubles as the hint for where the best drifts are.
 - No tyre-stack barriers or roadside props. They add detail exactly where the player should be watching the car.
