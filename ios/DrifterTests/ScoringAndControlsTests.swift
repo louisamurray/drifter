@@ -88,6 +88,76 @@ final class ControlsTests: XCTestCase {
         XCTAssertEqual(s.throttle, 0)
     }
 
+    func testPedalDragSwitchesImmediatelyWithoutLifting() {
+        let c = TouchControls()
+        let finger = NSObject()
+        let id = ObjectIdentifier(finger)
+        c.began(id: id, x: 64, y: 780)
+        XCTAssertEqual(c.sample(dt: 1).throttle, 1)
+        c.moved(id: id, x: 156, y: 780)
+        let braking = c.sample(dt: 1 / 120)
+        XCTAssertTrue(braking.handbrake)
+        XCTAssertEqual(braking.throttle, 0)
+        c.moved(id: id, x: 64, y: 780)
+        let accelerating = c.sample(dt: 1 / 120)
+        XCTAssertFalse(accelerating.handbrake)
+        XCTAssertGreaterThan(accelerating.throttle, 0)
+        c.ended(id: id)
+        XCTAssertEqual(c.sample(dt: 1 / 120).throttle, 0)
+    }
+
+    func testEntireBrakePedalIsReachableOnNarrowScreensAndWithSafeInsets() {
+        for (width, safeLeft) in [(320.0, 0.0), (375.0, 0.0), (400.0, 30.0)] {
+            let rightEdge = safeLeft + pad.inset + pad.pedalSize * 2 + pad.pedalGap - 1
+            XCTAssertEqual(zoneAt(x: rightEdge, y: 760, width: width, height: 800, pad: pad, safeLeft: safeLeft), .brake)
+            let gasCentre = safeLeft + pad.inset + pad.pedalSize / 2
+            XCTAssertEqual(zoneAt(x: gasCentre, y: 760, width: width, height: 800, pad: pad, safeLeft: safeLeft), .gas)
+        }
+    }
+
+    func testTouchesMatchSafeAreaAdjustedPedalsAndStick() {
+        let c = TouchControls()
+        c.safeLeft = 30
+        c.safeRight = 20
+        c.safeBottom = 34
+        c.carHeading = .pi / 2
+        let gas = NSObject(), steer = NSObject()
+        c.began(id: ObjectIdentifier(gas), x: c.safeLeft + pad.inset + pad.pedalSize / 2,
+                y: c.screenHeight - c.safeBottom - pad.inset - pad.pedalSize / 2)
+        let centre = c.stickCentre
+        c.began(id: ObjectIdentifier(steer), x: centre.x, y: centre.y - 50)
+        let state = c.sample(dt: 1)
+        XCTAssertEqual(state.throttle, 1)
+        XCTAssertEqual(state.steer, 0, accuracy: 1e-9)
+        XCTAssertTrue(c.stickHeld)
+    }
+
+    func testSteeringFingerRetainsOwnershipAlongsidePedalChanges() {
+        let c = TouchControls()
+        c.carHeading = .pi / 2
+        let steer = NSObject(), extra = NSObject(), pedal = NSObject()
+        let centre = c.stickCentre
+        c.began(id: ObjectIdentifier(steer), x: centre.x - 30, y: centre.y - 40)
+        c.began(id: ObjectIdentifier(extra), x: centre.x + 40, y: centre.y - 40)
+        c.began(id: ObjectIdentifier(pedal), x: 64, y: 780)
+        XCTAssertGreaterThan(c.sample(dt: 1).steer, 0)
+        c.moved(id: ObjectIdentifier(pedal), x: 156, y: 780)
+        let braking = c.sample(dt: 1 / 120)
+        XCTAssertGreaterThan(braking.steer, 0)
+        XCTAssertTrue(braking.handbrake)
+        c.ended(id: ObjectIdentifier(extra))
+        XCTAssertGreaterThan(c.sample(dt: 1 / 120).steer, 0)
+        c.moved(id: ObjectIdentifier(steer), x: centre.x + 30, y: centre.y - 40)
+        XCTAssertLessThan(c.sample(dt: 1 / 120).steer, 0)
+        c.ended(id: ObjectIdentifier(steer))
+        XCTAssertEqual(c.sample(dt: 1 / 120).steer, 0)
+        XCTAssertTrue(c.state.handbrake)
+        c.reset()
+        XCTAssertFalse(c.sample(dt: 1 / 120).handbrake)
+        c.began(id: ObjectIdentifier(extra), x: centre.x - 30, y: centre.y - 40)
+        XCTAssertGreaterThan(c.sample(dt: 1 / 120).steer, 0)
+    }
+
     func testTouchControlsMapThumbsToPedalsAndStick() {
         let c = TouchControls()
         c.screenWidth = 400

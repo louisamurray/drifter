@@ -167,6 +167,7 @@ final class GameScene: SKScene {
         run.viewportHeight = h
         run.controls.screenWidth = w
         run.controls.screenHeight = h
+        run.controls.safeLeft = Double(safe.left)
         run.controls.safeRight = Double(safe.right)
         run.controls.safeBottom = Double(safe.bottom)
         hud.layout(width: w, height: h, safeTop: Double(safe.top), safeLeft: Double(safe.left), safeRight: Double(safe.right), safeBottom: Double(safe.bottom), pad: run.controls.pad)
@@ -226,6 +227,7 @@ final class GameScene: SKScene {
     // MARK: - Loop
 
     override func update(_ currentTime: TimeInterval) {
+        if let view, view.safeAreaInsets != safe { layout() }
         if lastTime == 0 { lastTime = currentTime }
         let frameDt = min(currentTime - lastTime, Config.loop.maxFrameDt)
         lastTime = currentTime

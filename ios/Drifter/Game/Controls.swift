@@ -37,10 +37,12 @@ let stickDeadzone = 0.18
 
 /// Which control a touch at (x, y) lands on, in a top-left-origin screen of
 /// the given size, or nil when it is not a control.
-func zoneAt(x: Double, y: Double, width: Double, height: Double, pad: PadLayout) -> Zone? {
+func zoneAt(x: Double, y: Double, width: Double, height: Double, pad: PadLayout, safeLeft: Double = 0) -> Zone? {
     if y < height * pad.bandTop { return nil }
-    if x >= width / 2 { return .stick }
-    return x < pad.inset + pad.pedalSize + pad.pedalGap / 2 ? .gas : .brake
+    // Give the whole visible brake pedal to the pedals, even on narrow screens.
+    let pedalRight = safeLeft + pad.inset + pad.pedalSize * 2 + pad.pedalGap
+    if x >= max(width / 2, pedalRight) { return .stick }
+    return x < safeLeft + pad.inset + pad.pedalSize + pad.pedalGap / 2 ? .gas : .brake
 }
 
 /// The heading a stick thumb asks for, from its offset (dx, dy) in y-up
@@ -87,7 +89,8 @@ final class TouchControls {
     private(set) var state = InputState()
     private(set) var held: [Zone: Bool] = [:]
     var pad = Config.input.pad
-    /// Safe-area insets at the right and bottom edges, for the stick's centre.
+    /// Safe-area insets shared with the drawn pedals and stick.
+    var safeLeft = 0.0
     var safeRight = 0.0
     var safeBottom = 0.0
     var screenWidth = 390.0
@@ -98,6 +101,7 @@ final class TouchControls {
     private(set) var stickX = 0.0
     private(set) var stickY = 0.0
 
+    private var stickTouch: ObjectIdentifier?
     private var touches: [ObjectIdentifier: TrackedTouch] = [:]
 
     init() {
@@ -111,12 +115,21 @@ final class TouchControls {
     }
 
     func began(id: ObjectIdentifier, x: Double, y: Double) {
-        guard let zone = zoneAt(x: x, y: y, width: screenWidth, height: screenHeight, pad: pad) else { return }
+        guard let zone = zoneAt(x: x, y: y, width: screenWidth, height: screenHeight, pad: pad, safeLeft: safeLeft) else { return }
+        if zone == .stick {
+            guard stickTouch == nil else { return }
+            stickTouch = id
+        }
         touches[id] = TrackedTouch(zone: zone, x: x, y: y)
     }
 
     func moved(id: ObjectIdentifier, x: Double, y: Double) {
         guard var t = touches[id] else { return }
+        // Pedals follow the thumb; steering retains ownership until lifted.
+        if t.zone != .stick {
+            let boundary = safeLeft + pad.inset + pad.pedalSize + pad.pedalGap / 2
+            t.zone = x < boundary ? .gas : .brake
+        }
         t.x = x
         t.y = y
         touches[id] = t
@@ -124,6 +137,7 @@ final class TouchControls {
 
     func ended(id: ObjectIdentifier) {
         touches[id] = nil
+        if stickTouch == id { stickTouch = nil }
     }
 
     /// Raw, unsmoothed controls right now.
@@ -131,7 +145,7 @@ final class TouchControls {
         var stick: Double? = nil
         stickX = 0
         stickY = 0
-        if let onStick = touches.values.first(where: { $0.zone == .stick }) {
+        if let id = stickTouch, let onStick = touches[id] {
             let c = stickCentre
             let r = pad.stickRadius
             let dx = onStick.x - c.x
@@ -158,6 +172,7 @@ final class TouchControls {
     /// Drop any held input, e.g. when leaving the playing state.
     func reset() {
         touches.removeAll()
+        stickTouch = nil
         state = InputState()
         for z in Zone.allCases { held[z] = false }
         stickX = 0
