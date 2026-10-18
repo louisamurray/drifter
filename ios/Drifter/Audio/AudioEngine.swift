@@ -9,12 +9,21 @@ final class AudioEngine {
     private let engine = AVAudioEngine()
     private var source: AVAudioSourceNode?
     private let synth = Synth()
-    private var running = false
+    // Session activation and engine operations can block. Keep them off the UI
+    // thread and on one queue so a pause requested during startup runs after it.
+    private let lifecycleQueue = DispatchQueue(label: "com.whiringa.drifter.audio", qos: .userInitiated)
+    private let activateSession: () throws -> Void
+    private var running = false // lifecycleQueue only
     private(set) var muted: Bool {
         didSet { Storage.saveMuted(muted) }
     }
 
-    init() {
+    init(activateSession: @escaping () throws -> Void = {
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+        try session.setActive(true)
+    }) {
+        self.activateSession = activateSession
         muted = Storage.loadMuted()
         synth.masterTarget = muted ? 0 : 1
     }
@@ -25,13 +34,16 @@ final class AudioEngine {
         if !value { start() }
     }
 
-    /// Build the graph and start the session. Safe to call repeatedly.
+    /// Schedule graph/session startup without blocking the caller. Safe to call repeatedly.
     func start() {
+        lifecycleQueue.async { self.startOnAudioQueue() }
+    }
+
+    private func startOnAudioQueue() {
+        dispatchPrecondition(condition: .onQueue(lifecycleQueue))
         guard !running else { return }
         do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
-            try session.setActive(true)
+            try activateSession()
         } catch {
             return
         }
@@ -58,13 +70,17 @@ final class AudioEngine {
     }
 
     func suspend() {
-        guard running else { return }
-        engine.pause()
+        lifecycleQueue.async {
+            guard self.running else { return }
+            self.engine.pause()
+        }
     }
 
     func resume() {
-        guard running else { return }
-        if !engine.isRunning { try? engine.start() }
+        lifecycleQueue.async {
+            guard self.running else { return }
+            if !self.engine.isRunning { try? self.engine.start() }
+        }
     }
 
     func startEngineSound() {
