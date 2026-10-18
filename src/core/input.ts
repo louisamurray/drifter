@@ -97,7 +97,8 @@ export class TouchControls {
     target.addEventListener('pointerdown', this.onDown);
     target.addEventListener('pointerup', this.onUp);
     target.addEventListener('pointercancel', this.onUp);
-    target.addEventListener('contextmenu', preventDefault);
+    // A long press anywhere, HUD included, must never open the browser's menu
+    window.addEventListener('contextmenu', preventDefault);
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', this.onKey);
     window.addEventListener('blur', this.reset);
@@ -107,7 +108,7 @@ export class TouchControls {
     this.target.removeEventListener('pointerdown', this.onDown);
     this.target.removeEventListener('pointerup', this.onUp);
     this.target.removeEventListener('pointercancel', this.onUp);
-    this.target.removeEventListener('contextmenu', preventDefault);
+    window.removeEventListener('contextmenu', preventDefault);
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKey);
     window.removeEventListener('blur', this.reset);
