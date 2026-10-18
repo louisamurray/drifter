@@ -257,6 +257,11 @@ hud.onShare = () => {
 hud.onPause = () => {
   if (state === 'playing') setState('paused');
 };
+input.onConfirmKey = () => {
+  if (state === 'title') hud.onStart?.();
+  else if (state === 'gameover') hud.onRestart?.();
+  else if (state === 'paused') hud.onResume?.();
+};
 input.onPauseKey = () => {
   if (state === 'playing') setState('paused');
   else if (state === 'paused') hud.onResume?.();

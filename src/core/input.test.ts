@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  TouchControls,
   advanceControls,
   NO_KEYS,
   rampSteer,
@@ -205,5 +206,96 @@ describe('rampSteer', () => {
     const mid = hold(1, -1, 0.1);
     expect(mid).toBeCloseTo(0, 2);
     expect(hold(1, -1, 0.4)).toBeCloseTo(-0.5, 1);
+  });
+});
+
+describe('desktop keyboard events', () => {
+  let input: TouchControls;
+  afterEach(() => {
+    input.dispose();
+    document.body.replaceChildren();
+  });
+
+  function setup() {
+    input = new TouchControls(document.createElement('canvas'));
+    input.scheme = 'pedals';
+    return input;
+  }
+
+  function key(type: 'keydown' | 'keyup', value: string, options: KeyboardEventInit = {}) {
+    const event = new KeyboardEvent(type, {
+      key: value,
+      bubbles: true,
+      cancelable: true,
+      ...options,
+    });
+    (document.activeElement ?? window).dispatchEvent(event);
+    return event;
+  }
+
+  it('drives with WASD and arrows, and releases each held key independently', () => {
+    const controls = setup();
+    key('keydown', 'W');
+    key('keydown', 'a');
+    key('keydown', 'ArrowLeft');
+    expect(controls.raw()).toMatchObject({ throttle: 1, steer: -1, handbrake: false });
+    key('keyup', 'a');
+    expect(controls.raw().steer).toBe(-1);
+    key('keyup', 'ArrowLeft');
+    key('keydown', ' ');
+    expect(controls.raw()).toMatchObject({ throttle: 1, steer: 0, handbrake: true });
+    key('keyup', 'W');
+    key('keyup', ' ');
+    expect(controls.raw()).toMatchObject({ throttle: 0, steer: 0, handbrake: false });
+  });
+
+  it('fires pause and confirm once per press rather than on key repeat', () => {
+    const controls = setup();
+    controls.onPauseKey = vi.fn();
+    controls.onConfirmKey = vi.fn();
+    for (const value of ['Escape', 'p', 'Enter']) {
+      expect(key('keydown', value).defaultPrevented).toBe(true);
+      key('keydown', value, { repeat: true });
+      key('keyup', value);
+    }
+    expect(controls.onPauseKey).toHaveBeenCalledTimes(2);
+    expect(controls.onConfirmKey).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves focused UI controls and browser shortcuts alone', () => {
+    const controls = setup();
+    controls.onConfirmKey = vi.fn();
+    key('keydown', 'w', { metaKey: true });
+    expect(controls.raw().throttle).toBe(0);
+    for (const tag of ['input', 'button', 'select', 'textarea']) {
+      const field = document.createElement(tag);
+      document.body.append(field);
+      field.focus();
+      expect(key('keydown', 'Enter').defaultPrevented).toBe(false);
+      key('keydown', 'w');
+      expect(controls.raw().throttle).toBe(0);
+    }
+    expect(controls.onConfirmKey).not.toHaveBeenCalled();
+  });
+
+  it('clears held keys on blur and removes listeners when disposed', () => {
+    const controls = setup();
+    key('keydown', 'w');
+    key('keydown', 'd');
+    window.dispatchEvent(new Event('blur'));
+    expect(controls.raw()).toMatchObject({ throttle: 0, steer: 0 });
+    controls.dispose();
+    key('keydown', 'w');
+    expect(controls.raw().throttle).toBe(0);
+  });
+
+  it('releases a driving key after focus moves to a field', () => {
+    const controls = setup();
+    key('keydown', 'w');
+    const field = document.createElement('input');
+    document.body.append(field);
+    field.focus();
+    key('keyup', 'w');
+    expect(controls.raw().throttle).toBe(0);
   });
 });

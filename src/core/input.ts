@@ -15,7 +15,7 @@
  * above the control band are ignored in this scheme.
  *
  * Keyboard: arrows or A/D steer, Up or W is the gas (two-thumb scheme only),
- * Space, Down or S is the handbrake, Escape or P pauses.
+ * Space, Down or S is the handbrake, Escape or P pauses. Enter starts, retries or resumes.
  */
 import { angleDelta } from './angle';
 
@@ -237,6 +237,9 @@ export class TouchControls {
   /** Called on Escape or P for desktop pause. */
   onPauseKey: (() => void) | null = null;
 
+  /** Called on Enter when no form control owns the key. */
+  onConfirmKey: (() => void) | null = null;
+
   private readonly pointers = new Map<number, Touch>();
   private readonly keys = new Set<string>();
 
@@ -353,14 +356,31 @@ export class TouchControls {
 
   private readonly onKey = (e: KeyboardEvent): void => {
     const key = e.key.toLowerCase();
-    if (e.type === 'keydown' && (key === 'escape' || key === 'p')) {
-      this.onPauseKey?.();
+    // Always release tracked keys, even if focus or modifiers changed while held.
+    if (e.type === 'keyup') {
+      if (this.keys.delete(key)) e.preventDefault();
+      return;
+    }
+    const target = e.target;
+    if (
+      e.ctrlKey ||
+      e.metaKey ||
+      e.altKey ||
+      (target instanceof HTMLElement &&
+        (target.isContentEditable || target.closest('input, textarea, select, button, a[href]')))
+    )
+      return;
+    if (key === 'escape' || key === 'p' || key === 'enter') {
+      e.preventDefault();
+      if (!e.repeat) {
+        if (key === 'enter') this.onConfirmKey?.();
+        else this.onPauseKey?.();
+      }
       return;
     }
     if (!KEYS.has(key)) return;
     e.preventDefault();
-    if (e.type === 'keydown') this.keys.add(key);
-    else this.keys.delete(key);
+    this.keys.add(key);
   };
 }
 

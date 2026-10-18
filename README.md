@@ -35,6 +35,8 @@ Nothing moves the car but the gas. The stick is directional: its angle is the he
 
 On a phone in a browser, the title screen suggests Add to Home Screen. Launched that way there is no browser toolbar under the thumb.
 
+On desktop, press **Enter** to start, retry or resume. **Esc/P** toggles pause. Keyboard hints replace the touch joystick and pedals on devices with a mouse or trackpad. The selected control scheme still determines whether acceleration is automatic or uses **W/Up**.
+
 ## Development
 
 Requires Node 22+.

@@ -84,7 +84,8 @@ export class Hud {
           <button class="chip controls-chip" data-act="controls" data-scheme="pedals">Two thumbs</button>
         </div>
         <div class="hint"></div>
-        <div class="title-cta">Tap to drive</div>
+        <div class="title-cta"><span class="touch-only">Tap to drive</span><span class="keyboard-only">Enter to drive</span></div>
+        <div class="keyboard-only keyboard-hint keyboard-driving"></div>
         <div class="title-sub"></div>
         <div class="title-best"></div>
         <div class="title-install">Add to Home Screen to play full screen</div>
@@ -119,6 +120,7 @@ export class Hud {
         <div class="pedal pedal-brake"><span>brake</span></div>
         <div class="stick"><div class="stick-knob"></div></div>
       </div>
+      <div class="keyboard-only keyboard-hint keyboard-playing keyboard-driving"></div>
       <div class="hud-timebar"></div>
       <div class="hud-score"><span class="label">score</span><span class="value">0</span></div>
       <div class="hud-timer">60.0</div>
@@ -158,6 +160,7 @@ export class Hud {
     paused.innerHTML = `
       <div class="panel">
         <div class="panel-title">Paused</div>
+        <div class="keyboard-only keyboard-hint">Enter or Esc / P to resume</div>
         <button class="btn btn-primary" data-act="resume">Resume</button>
         <button class="btn" data-act="restart">Restart</button>
         <button class="btn btn-quiet" data-act="sound">Sound on</button>
@@ -177,6 +180,7 @@ export class Hud {
         <div class="over-best">Best 0</div>
       </div>
       <div class="over-actions">
+        <div class="keyboard-only keyboard-hint">Enter to drive again</div>
         <button class="btn btn-primary btn-large" data-act="restart">Drive again</button>
         <button class="btn" data-act="share">Share</button>
       </div>`;
@@ -260,6 +264,9 @@ export class Hud {
       }),
     );
     this.zonesEl.replaceChildren(...this.zoneEls.values());
+    for (const hint of this.root.querySelectorAll('.keyboard-driving')) {
+      hint.textContent = `A/D or Left/Right to steer · ${scheme === 'pedals' ? 'W/Up for gas' : 'Auto accelerate'} · Space or S/Down for handbrake · Esc/P to pause`;
+    }
     this.refreshTitleText();
   }
 

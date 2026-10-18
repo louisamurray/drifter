@@ -58,3 +58,19 @@ describe('best score on game over', () => {
     expect(hud.root.querySelector('.over-newbest')?.classList.contains('show')).toBe(true);
   });
 });
+
+describe('desktop control hints', () => {
+  it('describes the selected throttle scheme while retaining touch controls', () => {
+    const hud = new Hud(document.body);
+    hud.setControls('pedals');
+    const hints = () =>
+      [...hud.root.querySelectorAll('.keyboard-driving')].map((el) => el.textContent);
+    expect(hints()).toHaveLength(2);
+    for (const text of hints()) expect(text).toContain('W/Up for gas');
+    expect(hud.root.querySelector('.pad')?.classList.contains('show')).toBe(true);
+    expect(hud.root.querySelector('.title-cta .keyboard-only')?.textContent).toBe('Enter to drive');
+    hud.setControls('thumb');
+    for (const text of hints()) expect(text).toContain('Auto accelerate');
+    expect(hud.root.querySelectorAll('.hint-thumb')).toHaveLength(2);
+  });
+});

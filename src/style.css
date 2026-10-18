@@ -770,3 +770,33 @@ body {
   color: var(--asphalt);
   border-color: var(--cream);
 }
+
+/* Desktop uses keyboard cues; touch devices retain the pedals and stick. */
+.keyboard-only {
+  display: none;
+}
+.keyboard-hint {
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+  text-wrap: balance;
+}
+.keyboard-playing {
+  position: absolute;
+  bottom: calc(var(--sab) + 24px);
+  left: calc(var(--sal) + 24px);
+  right: calc(var(--sar) + 24px);
+}
+@media (hover: hover) and (pointer: fine) {
+  .keyboard-only {
+    display: block;
+  }
+  .touch-only,
+  .hint,
+  .title-sub,
+  .zones,
+  .pad.show {
+    display: none;
+  }
+}
