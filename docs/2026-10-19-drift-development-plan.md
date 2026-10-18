@@ -1,7 +1,8 @@
 # Drifter: handling and engagement development plan
 
 Date: 19 October 2026  
-Status: proposed development sequence; gameplay implementation has not started under this plan.  
+Status: Phase 0 engineering baseline recorded; initial D1 studies created; human validation pending. The requested car park enlargement is implemented; force-based handling has not started.
+
 Repository inspected: `dedc31f`.  
 Input: [drift physics and engagement research](2026-10-19-drift-physics-and-engagement-research.md).  
 Design destination: [Drifter — Design](https://www.figma.com/design/uoKBYYIry5l3BW8FIL2rui/Drifter-%E2%80%94-Design).
@@ -32,7 +33,7 @@ This plan changes the original direction in [PLAN.md](PLAN.md): physical handlin
 - `src/game/scoring.ts` owns both score and countdown. Untimed practice needs an explicit session policy rather than a very large timer or hidden timer display.
 - `src/storage.ts` keys best scores by course only. New physics, scoring and assistance could otherwise make incomparable runs share one best.
 
-Figma inspection found one page, `0:1` / `Page 1`, with zero child nodes. There are no existing screens or components to use as an approved visual reference. The screen names and interactions below are proposed design work. Preserve the documented visual direction in `docs/PLAN.md` while creating them.
+Initial Figma inspection found one empty page, `0:1` / `Page 1`. Eight editable D1 studies have since been created in the supplied file; see the [practice design record](2026-10-19-practice-design.md). They are proposed layouts, with remaining variants and runtime validation recorded there. Preserve the documented visual direction in `docs/PLAN.md`.
 
 ### Principles
 
@@ -237,13 +238,13 @@ Maintain a decision log in implementation evidence with: observation, severity, 
 
 Critical path: **T1 → T2 → T3 → T4 → Gate 1 → T5 → T6/T7 → Gate 2 → T8 → T9 → T10 → T11**. D1–D3 can be prepared ahead of their dependent engineering work. T6 and T7 share telemetry and copy decisions; agree those before splitting their implementation.
 
-Start with **T1 and D1**, then deliver **T2–T4** as the first playable slice. Estimate later phases after the solver spike reveals tuning and integration cost; no delivery dates are committed here.
+T1's engineering capture and conversion contract are recorded in the [handling baseline](2026-10-19-handling-baseline.md); human baseline and a complete fresh browser/device pass remain pending. D1's initial studies are linked above. The car park is now 2,700 × 3,900 world units at the user's request; its title demo remains a central figure of eight. Next engineering work is **T2**, followed by **T3–T4** for the first playable handling/practice slice. Estimate later phases after the solver spike reveals tuning and integration cost; no delivery dates are committed here.
 
 Later priorities, conditional on playtesting: personal-best ghost with compatibility checks, short medal challenges and additional corner sequences. Add explicit wheel angular speed/slip ratio only when a measured handling or feedback limitation justifies it.
 
 ## 9. Planning artefacts and evidence limits
 
 - This Markdown file is the detailed development plan; the supplied research remains the external-source record. This task did not revalidate those public sources or add new external factual claims.
-- The supplied Figma Design file was inspected structurally and found empty. D1–D3 are future design deliverables; no gameplay screens were created or approved in this planning task.
+- The supplied Figma Design file was initially empty. D1 now has eight editable proposed screens; approval, remaining variants and runtime/device validation are outstanding. D2–D3 remain future deliverables.
 - A FigJam dependency/gate diagram was submitted through Figma. Generation requires a team/organisation selection in the Figma widget; a completed board URL is not yet available. The source diagram is retained in [drift-development-sequence.mmd](drift-development-sequence.mmd).
-- Gameplay code, runtime tests and human/device playtests were not changed or executed as part of writing this plan. Each delivery gate requires its own implementation evidence.
+- Writing the original plan did not change gameplay or run tests. Subsequent Phase 0 work added baseline fixtures, recorded check results and implemented the requested larger car park with related regression tests. Human/device playtests remain pending. Each delivery gate requires its own implementation evidence.

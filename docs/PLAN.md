@@ -2,6 +2,8 @@
 
 A simple, satisfying car-drifting game for mobile browsers. Top-down, thumb controls, short sessions, instant restart.
 
+Current direction (19 October 2026): the [handling and engagement development plan](2026-10-19-drift-development-plan.md) adds force-based handling and untimed practice to the original v1 scope below. Phase 0's engineering baseline and initial Figma practice studies are recorded; the solver and untimed activity are not implemented yet. The web car park has been enlarged to 2700 × 3900 world units.
+
 ---
 
 ## 1. Vision
