@@ -190,6 +190,7 @@ Key decisions:
 - Handle `resize` and `orientationchange` by re-fitting the canvas.
 - Audio context resume on first user gesture.
 - Test iOS Safari (most restrictive) first, then Chrome Android.
+- Browser toolbars sit at the bottom of an iPhone screen (Safari, Brave), under a portrait thumb. A long press there opens the browser's own menus and the page never sees it. Mitigations: hold cues sit mid-screen and stay until the first lap, and in a browser on a touch device the title screen suggests Add to Home Screen, which launches with no toolbar. A web manifest and icons ship for that; the service worker is still milestone 6.
 
 ---
 
