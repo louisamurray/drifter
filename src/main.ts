@@ -33,8 +33,9 @@ import {
   minRadiusAhead,
   nearestOnTrack,
   startPose,
+  trackBounds,
 } from './game/track';
-import { createCamera, moveCameraTo, trackOverview, updateCamera } from './render/camera';
+import { createCamera, fitOverview, moveCameraTo, updateCamera } from './render/camera';
 import {
   beginWorld,
   drawCar,
@@ -90,7 +91,7 @@ let lastTick = 0;
 /** What the car looked like it was doing on the last physics step, for the renderer. */
 const carLook = { steer: 0, roll: 0, brake: 0 };
 
-const skids = new SkidLayer(track);
+const skids = new SkidLayer(trackBounds(track), track.width * 1.5);
 const smoke = new SmokePool(config.juice.smokeMax);
 const shake = createShake();
 let everDrifted = false;
@@ -346,7 +347,14 @@ function update(dt: number): void {
     case 'gameover': {
       Object.assign(prev, car);
       const band = hud.overviewBand();
-      const o = trackOverview(track, viewport.width, viewport.height, band.top, band.bottom);
+      const o = fitOverview(
+        trackBounds(track),
+        track.width,
+        viewport.width,
+        viewport.height,
+        band.top,
+        band.bottom,
+      );
       moveCameraTo(camera, o.x, o.y, o.zoom, dt);
       break;
     }

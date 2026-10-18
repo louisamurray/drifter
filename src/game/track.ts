@@ -224,3 +224,23 @@ export function startPose(track: Track): { x: number; y: number; heading: number
   const p = at(track.points, 0);
   return { x: p.x, y: p.y, heading: Math.atan2(p.ty, p.tx) };
 }
+
+/** Axis-aligned extent of a piece of geometry in world px. */
+export interface Bounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/** Extent of the centreline. Add the road width for the asphalt itself. */
+export function trackBounds(track: Track): Bounds {
+  const b: Bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  for (const p of track.points) {
+    b.minX = Math.min(b.minX, p.x);
+    b.minY = Math.min(b.minY, p.y);
+    b.maxX = Math.max(b.maxX, p.x);
+    b.maxY = Math.max(b.maxY, p.y);
+  }
+  return b;
+}

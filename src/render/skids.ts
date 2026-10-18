@@ -1,10 +1,10 @@
 import { config } from '../config';
-import type { Track } from '../game/track';
+import type { Bounds } from '../game/track';
 
 /**
- * Persistent rubber. An offscreen canvas covering the track in world space;
+ * Persistent rubber. An offscreen canvas covering the course in world space;
  * marks are laid down once and composited under the car every frame. By the
- * end of a run the track is a drawing of where the player drifted.
+ * end of a run the asphalt is a drawing of where the player drifted.
  */
 export class SkidLayer {
   readonly canvas: HTMLCanvasElement;
@@ -15,22 +15,12 @@ export class SkidLayer {
   readonly worldHeight: number;
   private readonly scale: number;
 
-  constructor(track: Track) {
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    for (const p of track.points) {
-      minX = Math.min(minX, p.x);
-      minY = Math.min(minY, p.y);
-      maxX = Math.max(maxX, p.x);
-      maxY = Math.max(maxY, p.y);
-    }
-    const pad = track.width * 1.5;
-    this.originX = minX - pad;
-    this.originY = minY - pad;
-    this.worldWidth = maxX - minX + pad * 2;
-    this.worldHeight = maxY - minY + pad * 2;
+  /** Covers `bounds` plus `pad` world px on every side. */
+  constructor(bounds: Bounds, pad: number) {
+    this.originX = bounds.minX - pad;
+    this.originY = bounds.minY - pad;
+    this.worldWidth = bounds.maxX - bounds.minX + pad * 2;
+    this.worldHeight = bounds.maxY - bounds.minY + pad * 2;
     this.scale = config.juice.skidScale;
 
     this.canvas = document.createElement('canvas');

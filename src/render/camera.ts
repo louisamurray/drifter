@@ -1,6 +1,6 @@
 import { config } from '../config';
 import type { CarState } from '../game/car';
-import type { Track } from '../game/track';
+import type { Bounds } from '../game/track';
 
 export interface Camera {
   x: number;
@@ -40,36 +40,31 @@ export interface Overview {
 }
 
 /**
- * Camera target that fits the whole track inside a horizontal band of the
- * screen, for the game-over frame. `bandTop` and `bandBottom` are screen
- * pixels; the overlay's score sits above the band and its buttons below it.
+ * Camera target that fits `bounds`, plus `pad` world px on every side, inside
+ * a horizontal band of the screen, for the game-over frame. `bandTop` and
+ * `bandBottom` are screen pixels; the overlay's score sits above the band and
+ * its buttons below it.
  */
-export function trackOverview(
-  track: Track,
+export function fitOverview(
+  bounds: Bounds,
+  pad: number,
   viewWidth: number,
   viewHeight: number,
   bandTop = 0,
   bandBottom = viewHeight,
 ): Overview {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const p of track.points) {
-    minX = Math.min(minX, p.x);
-    minY = Math.min(minY, p.y);
-    maxX = Math.max(maxX, p.x);
-    maxY = Math.max(maxY, p.y);
-  }
-  const pad = track.width;
-  const w = maxX - minX + pad * 2;
-  const h = maxY - minY + pad * 2;
+  const w = bounds.maxX - bounds.minX + pad * 2;
+  const h = bounds.maxY - bounds.minY + pad * 2;
   const fill = config.camera.overviewFill;
   const bandHeight = Math.max(1, bandBottom - bandTop);
   const zoom = Math.min((viewWidth * fill) / w, (bandHeight * fill) / h);
-  // The world origin lands at carScreenY on screen; shift so the track centre
+  // The world origin lands at carScreenY on screen; shift so the course centre
   // sits in the middle of the band instead
   const bandCentre = (bandTop + bandBottom) / 2;
   const screenOffset = bandCentre - config.render.carScreenY * viewHeight;
-  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 - screenOffset / zoom, zoom };
+  return {
+    x: (bounds.minX + bounds.maxX) / 2,
+    y: (bounds.minY + bounds.maxY) / 2 - screenOffset / zoom,
+    zoom,
+  };
 }
