@@ -29,7 +29,7 @@ Nothing moves the car but the gas. The stick is directional: its angle is the he
 | Handbrake | Hold both halves                          | Space, Down or S |
 | Pause     | Button under the timer                    | Escape or P      |
 
-**Modes.** The circuit is a closed loop with laps and a lap bonus. Free drift is an open lot: no road to follow, so only the thumbs steer the car, and leaving the asphalt ends a chain. Each mode keeps its own best score.
+**Modes.** The circuit is a closed loop with laps and a lap bonus. Free drift is an open lot: no road to follow, so only the thumbs steer the car, and leaving the asphalt ends a chain. Each mode keeps its own best score, and the title screen lists both.
 
 On a phone in a browser, the title screen suggests Add to Home Screen. Launched that way there is no browser toolbar under the thumb.
 
