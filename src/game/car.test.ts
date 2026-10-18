@@ -130,6 +130,40 @@ describe('yaw dynamics', () => {
   });
 });
 
+describe('gas in a slide', () => {
+  /** Drive into a committed slide and return the car with the steer still held. */
+  function sliding() {
+    const car = run(180, 0);
+    run(30, 1, 1, car);
+    expect(car.drifting).toBe(true);
+    return car;
+  }
+
+  it('holds the rear loose on the gas and lets it bite when the gas is lifted', () => {
+    const onGas = sliding();
+    const lifted = { ...onGas };
+    for (let i = 0; i < 15; i++) {
+      stepCar(onGas, { throttle: 1, steer: 1, handbrake: false }, dt, p);
+      stepCar(lifted, { throttle: 0, steer: 1, handbrake: false }, dt, p);
+    }
+    expect(Math.abs(telemetry(lifted).lateralSpeed)).toBeLessThan(
+      Math.abs(telemetry(onGas).lateralSpeed) * 0.8,
+    );
+  });
+
+  it('keeps the rear loose on the handbrake even with the gas off', () => {
+    const free = sliding();
+    const braked = { ...free };
+    for (let i = 0; i < 15; i++) {
+      stepCar(free, { throttle: 0, steer: 0, handbrake: false }, dt, p);
+      stepCar(braked, { throttle: 0, steer: 0, handbrake: true }, dt, p);
+    }
+    expect(Math.abs(telemetry(braked).lateralSpeed)).toBeGreaterThan(
+      Math.abs(telemetry(free).lateralSpeed) * 1.5,
+    );
+  });
+});
+
 describe('corner lift', () => {
   it('allows top speed on a straight and less through a tight corner', () => {
     expect(cornerSpeed(Infinity, p)).toBe(p.maxSpeed);

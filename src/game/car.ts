@@ -55,8 +55,9 @@ export function telemetry(car: CarState): CarTelemetry {
  * lateral speed back out, which is what turns the car. Grip falls with steer
  * and speed so the rear breaks loose, and drops further once drifting so the
  * slide holds. While sliding the nose also eases back towards the direction
- * of travel, so a released slide swings straight rather than stopping dead.
- * Mutates and returns `car`.
+ * of travel, so a released slide swings straight rather than stopping dead,
+ * and on the pedals the gas is what keeps the rear loose. Mutates and returns
+ * `car`.
  */
 export function stepCar(
   car: CarState,
@@ -122,9 +123,10 @@ export function stepCar(
   vF = wx * fx + wy * fy;
   vL = wx * -fy + wy * fx;
 
-  // Lateral grip, reduced by steering effort at speed so the car can break loose
+  // Lateral grip, reduced by steering effort at speed so the car can break
+  // loose. In a slide the gas keeps the rear loose; lifting lets it bite again.
   let baseGrip = car.drifting
-    ? p.gripDrift
+    ? p.gripDrift + (p.gripNormal - p.gripDrift) * p.offGasGrip * (1 - input.throttle)
     : p.gripNormal * (1 - p.steerGripLoss * Math.abs(input.steer) * speedRatio);
   if (input.handbrake) baseGrip = Math.min(baseGrip, p.handbrakeGrip);
   const grip = baseGrip * surface.grip;

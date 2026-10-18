@@ -57,6 +57,13 @@ export const config = {
     gripNormal: 8,
     /** Lateral damping (1/s) while drifting. Low keeps the slide going. */
     gripDrift: 3,
+    /**
+     * How much of the way from gripDrift back to gripNormal the rear recovers
+     * with the gas fully off mid-slide (0 none, 1 all). The gas holds a slide
+     * and lifting ends it. Only the pedal scheme lifts; the one-thumb throttle
+     * is automatic.
+     */
+    offGasGrip: 0.7,
     /** Fraction of grip lost at full steer and full speed. Lets the car break loose. */
     steerGripLoss: 0.6,
     /** Peak yaw rate (rad/s) at full steer. */
