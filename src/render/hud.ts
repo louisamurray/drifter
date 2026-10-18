@@ -242,7 +242,7 @@ export class Hud {
     const how =
       this.scheme === 'thumb'
         ? 'Hold a side to steer, both for handbrake'
-        : 'Left thumb steers, right thumb holds the gas or pulls the handbrake';
+        : 'Right thumb steers, left thumb holds the gas or pulls the handbrake';
     this.titleSubEl.textContent = where + how;
     this.titleTagEl.textContent = `${this.scheme === 'thumb' ? 'One thumb' : 'Two thumbs'}. Sixty seconds.`;
   }

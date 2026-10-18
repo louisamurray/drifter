@@ -1,17 +1,4 @@
- A controls toggle above the hint picks one thumb or two.# Drifter — Game Design & Build Plan### 2.2 Controls (mobile first)
-Two schemes, chosen on the title screen and remembered. **Two thumbs** is the default: the screen is four equal columns, the left thumb steers and the right thumb drives.
-
-| Column | Action |
-|---|---|
-| Outer left | Steer left, with the same two-stage ramp as below |
-| Inner left | Steer right |
-| Inner right | Handbrake |
-| Outer right | Gas. Nothing else moves the car: lift to coast, hold to go. The gas eases in over 0.15 s and lets go at once. There is no corner lift in this scheme, speed is the player's to choose, and the tail lights glow whenever the gas is off |
-
-**One thumb** keeps the original scheme, with automatic throttle and the corner lift:
-
-| Input | Action |
-|---|---|
+# Drifter — Game Design & Build Plan
 
 A simple, satisfying car-drifting game for mobile browsers. Top-down, one-thumb controls, short sessions, instant restart.
 
@@ -48,7 +35,7 @@ A simple, satisfying car-drifting game for mobile browsers. Top-down, one-thumb 
 | No touch | Straighten. On asphalt the car also eases its nose toward the road direction (road assist), weaker mid-slide, off on grass. The car accelerates by itself at all times, but lifts off when it is going faster than the road ahead can take (corner lift) |
 | Pause button under the timer | Pause |
 
-Desktop fallback for development and testing: arrow keys or A/D steer, Up or W is the gas (two thumbs only), Space or Down is the handbrake, Escape or P pauses.
+Desktop fallback for development and testing: arrow keys or A/D steer, Space or Down is the handbrake, Escape or P pauses.
 
 Rationale: the physics decides the slide angle, so the player's only decisions are when to start sliding and when to stop. Binary hold controls make those decisions legible through the thumb, need no invisible centre point, and work one-handed (alternate sides) or two-handed (one thumb per side, handbrake by adding the second). An earlier drag-to-steer scheme was built and rejected: its centre was wherever the thumb first landed, steer and throttle were welded together, and full lock arrived within a few millimetres of travel.
 

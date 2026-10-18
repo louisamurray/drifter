@@ -6,10 +6,11 @@
  * with whichever side was pressed first so a second thumb adds the handbrake
  * without changing direction. The car accelerates by itself.
  *
- * Two thumbs: four equal columns. The outer left column steers left and the
- * inner one right; the inner right column is the handbrake and the outer
- * right is the gas. Nothing moves the car but the gas, so speed is the
- * player's to choose.
+ * Two thumbs: four equal columns. The right thumb steers: the inner right
+ * column steers left and the outer right column steers right. The left thumb
+ * drives: the outer left column is the gas and the inner left column is the
+ * handbrake. Nothing moves the car but the gas, so speed is the player's to
+ * choose.
  *
  * Keyboard: arrows or A/D steer, Up or W is the gas (two-thumb scheme only),
  * Space, Down or S is the handbrake, Escape or P pauses.
@@ -28,7 +29,7 @@ export type Zone = Side | 'brake' | 'gas';
 /** Touch columns from the left edge of the screen, per scheme. */
 export const ZONES: Record<ControlScheme, readonly Zone[]> = {
   thumb: ['left', 'right'],
-  pedals: ['left', 'right', 'brake', 'gas'],
+  pedals: ['gas', 'brake', 'left', 'right'],
 };
 
 /** Normalised control state the game reads each physics step. */

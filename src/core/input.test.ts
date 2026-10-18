@@ -57,7 +57,7 @@ describe('resolveControls with two thumbs', () => {
     expect(resolveControls([], keys({ gas: true }), 'pedals').throttle).toBe(1);
   });
 
-  it('steers with the left thumb while the right holds the gas or the brake', () => {
+  it('steers with the right thumb while the left holds the gas or the brake', () => {
     expect(resolveControls(['gas', 'left'], NO_KEYS, 'pedals')).toEqual({
       steer: -1,
       handbrake: false,
@@ -94,12 +94,12 @@ describe('zoneAt', () => {
     expect(zoneAt(0.5, 'thumb')).toBe('right');
   });
 
-  it('splits the screen in four columns for two thumbs', () => {
-    expect(zoneAt(0.1, 'pedals')).toBe('left');
-    expect(zoneAt(0.3, 'pedals')).toBe('right');
-    expect(zoneAt(0.6, 'pedals')).toBe('brake');
-    expect(zoneAt(0.9, 'pedals')).toBe('gas');
-    expect(zoneAt(1, 'pedals')).toBe('gas');
+  it('splits the screen in four columns: pedals on the left, steering on the right', () => {
+    expect(zoneAt(0.1, 'pedals')).toBe('gas');
+    expect(zoneAt(0.3, 'pedals')).toBe('brake');
+    expect(zoneAt(0.6, 'pedals')).toBe('left');
+    expect(zoneAt(0.9, 'pedals')).toBe('right');
+    expect(zoneAt(1, 'pedals')).toBe('right');
   });
 });
 
