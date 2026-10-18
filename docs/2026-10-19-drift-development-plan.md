@@ -1,7 +1,7 @@
 # Drifter: handling and engagement development plan
 
 Date: 19 October 2026  
-Status: Phase 0 engineering baseline recorded; initial D1 studies created; human validation pending. The requested car park enlargement is implemented; force-based handling has not started.
+Status: Phase 0 engineering baseline and T2 isolated solver complete; initial D1 studies created. Human validation, T3 gameplay integration and T4 untimed practice remain pending. The requested car park enlargement is implemented.
 
 Repository inspected: `dedc31f`.  
 Input: [drift physics and engagement research](2026-10-19-drift-physics-and-engagement-research.md).  
@@ -135,6 +135,8 @@ Roles below identify responsibilities, not assigned people. Deliver small review
 
 **T2 — Port and test the solver** · Engineering · Depends on: T1
 
+Status: implemented in `871d6a9`; see [T2 solver evidence](2026-10-19-force-solver-t2.md). The isolated module has 51 new tests and five captured native-reference comparisons. It is not used by the live game yet.
+
 - Adapt the native axle model, tyre curves, load transfer, drag, rolling resistance and rear handbrake into a pure TypeScript module.
 - Inspect the native integration and low-speed treatment rather than copying parameters unquestioningly. Test force bounds, finite loads and outputs, stopping and energy behaviour.
 - Begin at a matching fixed timestep for cross-platform fixtures. Compare 60 Hz and smaller steps before choosing any production substep count.
@@ -238,7 +240,7 @@ Maintain a decision log in implementation evidence with: observation, severity, 
 
 Critical path: **T1 → T2 → T3 → T4 → Gate 1 → T5 → T6/T7 → Gate 2 → T8 → T9 → T10 → T11**. D1–D3 can be prepared ahead of their dependent engineering work. T6 and T7 share telemetry and copy decisions; agree those before splitting their implementation.
 
-T1's engineering capture and conversion contract are recorded in the [handling baseline](2026-10-19-handling-baseline.md); human baseline and a complete fresh browser/device pass remain pending. D1's initial studies are linked above. The car park is now 2,700 × 3,900 world units at the user's request; its title demo remains a central figure of eight. Next engineering work is **T2**, followed by **T3–T4** for the first playable handling/practice slice. Estimate later phases after the solver spike reveals tuning and integration cost; no delivery dates are committed here.
+T1's engineering capture and conversion contract are recorded in the [handling baseline](2026-10-19-handling-baseline.md); human baseline and a complete fresh browser/device pass remain pending. D1's initial studies are linked above. The car park is now 2,700 × 3,900 world units at the user's request; its title demo remains a central figure of eight. [T2 is implemented and locally verified](2026-10-19-force-solver-t2.md). Next engineering work is **T3**, then **T4** for the first playable handling/practice slice. Start T3 with two 120 Hz solver substeps per existing 60 Hz web update and validate integration/performance before adoption. No delivery dates are committed here.
 
 Later priorities, conditional on playtesting: personal-best ghost with compatibility checks, short medal challenges and additional corner sequences. Add explicit wheel angular speed/slip ratio only when a measured handling or feedback limitation justifies it.
 
@@ -247,4 +249,4 @@ Later priorities, conditional on playtesting: personal-best ghost with compatibi
 - This Markdown file is the detailed development plan; the supplied research remains the external-source record. This task did not revalidate those public sources or add new external factual claims.
 - The supplied Figma Design file was initially empty. D1 now has eight editable proposed screens; approval, remaining variants and runtime/device validation are outstanding. D2–D3 remain future deliverables.
 - A FigJam dependency/gate diagram was submitted through Figma. Generation requires a team/organisation selection in the Figma widget; a completed board URL is not yet available. The source diagram is retained in [drift-development-sequence.mmd](drift-development-sequence.mmd).
-- Writing the original plan did not change gameplay or run tests. Subsequent Phase 0 work added baseline fixtures, recorded check results and implemented the requested larger car park with related regression tests. Human/device playtests remain pending. Each delivery gate requires its own implementation evidence.
+- Writing the original plan did not change gameplay or run tests. Subsequent work added baseline fixtures, the requested larger car park and the isolated T2 solver with native-reference and numerical regressions. T2 passes local checks but is not integrated into the live web game. Human/device playtests remain pending. Each delivery gate requires its own implementation evidence.
