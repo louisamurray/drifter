@@ -27,6 +27,17 @@ A simple, satisfying car-drifting game for mobile browsers. Top-down, one-thumb 
 - Track is a closed loop with a mix of hairpins, sweepers and a long straight, about 3 to 4 screen-heights per lap.
 
 ### 2.2 Controls (mobile first)
+Two schemes, chosen on the title screen and remembered. **Two thumbs** is the default: the screen is four equal columns, the right thumb steers and the left thumb drives.
+
+| Column | Action |
+|---|---|
+| Outer left | Gas. Nothing else moves the car: lift to coast, hold to go. The gas eases in over 0.15 s and lets go at once. There is no corner lift in this scheme, speed is the player's to choose, and the tail lights glow whenever the gas is off |
+| Inner left | Handbrake |
+| Inner right | Steer left, with the same two-stage ramp as below |
+| Outer right | Steer right |
+
+**One thumb** keeps the original scheme, with automatic throttle and the corner lift:
+
 | Input | Action |
 |---|---|
 | Hold left half of screen | Steer left. Two stages: half lock within 0.3 s (a grip turn), full lock after a further 0.5 s (the drift). Tap to correct, hold to commit |
@@ -35,7 +46,7 @@ A simple, satisfying car-drifting game for mobile browsers. Top-down, one-thumb 
 | No touch | Straighten. On asphalt the car also eases its nose toward the road direction (road assist), weaker mid-slide, off on grass. The car accelerates by itself at all times, but lifts off when it is going faster than the road ahead can take (corner lift) |
 | Pause button under the timer | Pause |
 
-Desktop fallback for development and testing: arrow keys or A/D steer, Space or Down is the handbrake, Escape or P pauses.
+Desktop fallback for development and testing: arrow keys or A/D steer, Up or W is the gas (two thumbs only), Space or Down is the handbrake, Escape or P pauses.
 
 Rationale: the physics decides the slide angle, so the player's only decisions are when to start sliding and when to stop. Binary hold controls make those decisions legible through the thumb, need no invisible centre point, and work one-handed (alternate sides) or two-handed (one thumb per side, handbrake by adding the second). An earlier drag-to-steer scheme was built and rejected: its centre was wherever the thumb first landed, steer and throttle were welded together, and full lock arrived within a few millimetres of travel.
 
@@ -69,7 +80,7 @@ Tunables live in one config object so tuning is a one-file job: `maxSpeed`, `acc
 - Run ends when a 60-second timer hits zero. Final score compared against local best.
 
 ### 2.6 Game loop & screens
-1. **Title** — ghost car laps the empty track with a thumb-drag hint (see section 3.8), "Tap to drive", best score, sound toggle, and a mode toggle: circuit or free drift (see section 2.7).
+1. **Title** — ghost car laps the empty track with a thumb-drag hint (see section 3.8), "Tap to drive", best score, sound toggle, and a mode toggle: circuit or free drift (see section 2.7). A controls toggle above the hint picks one thumb or two.
 2. **Countdown** — 3-2-1 overlaid on the track, car static.
 3. **Playing** — HUD: timer (top centre), score (top left), multiplier badge (top right, pulses when it increases), current chain score floating near the car.
 4. **Game over** — camera zooms out to show the whole track with the player's rubber on it, then final score, best score, "new best" callout, Restart button (large, bottom), Share button (Web Share API sending the zoomed-out frame as an image plus score text).
