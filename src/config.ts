@@ -157,6 +157,15 @@ export const config = {
     asphalt: '#1c2230',
     edgeLine: '#e8dcc4',
     offTrack: '#4a5238',
+    /** Mown-stripe and speck tones for the grass texture. Barely-there on purpose. */
+    offTrackStripe: '#4d5539',
+    offTrackSpeckLight: '#565f42',
+    offTrackSpeckDark: '#3f4630',
+    /** Soft shadow outside the edge line that lifts the road off the grass. */
+    trackShadow: 'rgba(0, 0, 0, 0.18)',
+    carShadow: 'rgba(0, 0, 0, 0.3)',
+    /** Halo behind the chain text and popups so they read over any surface. */
+    textHalo: 'rgba(18, 23, 31, 0.75)',
     skid: 'rgba(12, 10, 8, 0.7)',
     accent: '#ff5a2d',
     hudText: '#f2eee6',

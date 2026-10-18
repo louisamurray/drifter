@@ -40,6 +40,7 @@ import {
   drawCar,
   drawChain,
   drawDebug,
+  drawGrass,
   drawPopups,
   drawSmoke,
   drawTrack,
@@ -371,6 +372,7 @@ function render(alpha: number): void {
   const heading = lerpAngle(prev.heading, car.heading, alpha);
 
   beginWorld(ctx, viewport, camera, shake);
+  drawGrass(ctx, viewport, camera);
   drawTrack(ctx, track);
   skids.draw(ctx);
   drawSmoke(ctx, smoke);

@@ -27,6 +27,64 @@ export function endWorld(ctx: CanvasRenderingContext2D): void {
   ctx.restore();
 }
 
+/** World-space rectangle visible through the camera, with a margin for shake. */
+export function visibleWorld(
+  vp: Viewport,
+  cam: Camera,
+  margin = 24,
+): { x: number; y: number; w: number; h: number } {
+  const w = vp.width / cam.zoom + margin * 2;
+  const h = vp.height / cam.zoom + margin * 2;
+  return {
+    x: cam.x - vp.width / 2 / cam.zoom - margin,
+    y: cam.y - (vp.height * config.render.carScreenY) / cam.zoom - margin,
+    w,
+    h,
+  };
+}
+
+let grassPattern: CanvasPattern | null = null;
+
+/**
+ * Grass texture: mown stripes and sparse specks a few percent off the base
+ * olive. Dull enough not to pull the eye off the road, textured enough that
+ * running wide still shows motion. Built once, tiled in world space.
+ */
+function grass(ctx: CanvasRenderingContext2D): CanvasPattern | string {
+  if (grassPattern) return grassPattern;
+  const size = 96;
+  const tile = document.createElement('canvas');
+  tile.width = size;
+  tile.height = size;
+  const t = tile.getContext('2d');
+  if (!t) return config.palette.offTrack;
+  const p = config.palette;
+  t.fillStyle = p.offTrack;
+  t.fillRect(0, 0, size, size);
+  t.fillStyle = p.offTrackStripe;
+  t.fillRect(0, 0, size, size / 2);
+  // Deterministic specks so every tile edge matches its neighbour
+  let seed = 7;
+  const rand = (): number => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
+  for (let i = 0; i < 46; i++) {
+    t.fillStyle = i % 2 === 0 ? p.offTrackSpeckLight : p.offTrackSpeckDark;
+    const w = 2 + Math.round(rand() * 2);
+    t.fillRect(Math.floor(rand() * size), Math.floor(rand() * size), w, 2);
+  }
+  grassPattern = ctx.createPattern(tile, 'repeat');
+  return grassPattern ?? p.offTrack;
+}
+
+/** Fill the visible world with textured grass. Call inside beginWorld. */
+export function drawGrass(ctx: CanvasRenderingContext2D, vp: Viewport, cam: Camera): void {
+  const r = visibleWorld(vp, cam);
+  ctx.fillStyle = grass(ctx);
+  ctx.fillRect(r.x, r.y, r.w, r.h);
+}
+
 const EDGE = 6;
 const RUMBLE_WIDTH = 10;
 
@@ -44,8 +102,11 @@ export function drawTrack(ctx: CanvasRenderingContext2D, track: Track): void {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  // Edge line, then asphalt over it, leaves a cream border each side
+  // Soft shadow, then edge line, then asphalt over it, leaves a cream border each side
   tracePath(ctx, track);
+  ctx.strokeStyle = config.palette.trackShadow;
+  ctx.lineWidth = track.width + EDGE + 10;
+  ctx.stroke();
   ctx.strokeStyle = config.palette.edgeLine;
   ctx.lineWidth = track.width + EDGE;
   ctx.stroke();
@@ -115,6 +176,15 @@ export function drawCar(
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(heading);
+
+  // Drop shadow, offset down-screen so the car sits on the road rather than in it
+  ctx.save();
+  ctx.rotate(-heading);
+  ctx.translate(2, 4);
+  ctx.rotate(heading);
+  ctx.fillStyle = config.palette.carShadow;
+  ctx.fillRect(-CAR_LENGTH / 2, -CAR_WIDTH * 0.62, CAR_LENGTH, CAR_WIDTH * 1.24);
+  ctx.restore();
 
   // Rear wheels slightly wider than the body, drawn first so the body sits on them
   ctx.fillStyle = config.palette.carWheel;
@@ -189,9 +259,8 @@ export function drawPopups(ctx: CanvasRenderingContext2D, popups: Popup[]): void
     const alpha = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
     const scale = t < 0.15 ? 1 + (0.15 - t) * 3 : 1;
     ctx.globalAlpha = Math.max(0, alpha);
-    ctx.fillStyle = p.color;
     ctx.font = `800 ${String(Math.round(p.size * scale))}px ${UI_FONT}`;
-    ctx.fillText(p.text, p.x, p.y - rise);
+    haloText(ctx, p.text, p.x, p.y - rise, p.color);
   }
   ctx.globalAlpha = 1;
   ctx.textAlign = 'start';
@@ -209,10 +278,31 @@ export function drawChain(
   const size = 22 + Math.min(18, Math.log10(chain + 1) * 6);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = multiplier > 1 ? config.palette.accent : config.palette.hudText;
   ctx.font = `800 ${String(Math.round(size))}px ${UI_FONT}`;
-  ctx.fillText(`+${String(Math.round(chain))}`, x, y);
+  haloText(
+    ctx,
+    `+${String(Math.round(chain))}`,
+    x,
+    y,
+    multiplier > 1 ? config.palette.accent : config.palette.hudText,
+  );
   ctx.textAlign = 'start';
+}
+
+/** Text with a dark halo so it reads over cream edge lines and grass alike. */
+function haloText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  color: string,
+): void {
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = config.palette.textHalo;
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
 }
 
 /** Rear-wheel contact points in world space for a car pose. */
