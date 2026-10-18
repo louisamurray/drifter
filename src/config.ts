@@ -134,9 +134,9 @@ export const config = {
     scale: 1,
   },
   lot: {
-    /** Asphalt size of the free drift lot in world px, centred on the origin. About five screens tall. */
-    width: 1800,
-    height: 2600,
+    /** Asphalt size in world px, centred on the origin. More room without changing car or bay scale. */
+    width: 2700,
+    height: 3900,
     /** Corner radius of the asphalt. */
     corner: 300,
     /** Radius of the painted skidpad ring in the middle. */

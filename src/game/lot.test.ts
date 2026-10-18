@@ -24,6 +24,16 @@ describe('insideLot', () => {
   it('bounds the asphalt', () => {
     expect(lotBounds(lot)).toEqual({ minX: -500, minY: -700, maxX: 500, maxY: 700 });
   });
+
+  it('keeps the expanded practice space driveable beyond the former lot edges', () => {
+    const expanded = config.lot;
+    // Former edges were x=900 and y=1300. These driveable points need the new bounds.
+    expect(insideLot(expanded, 1200, 0)).toBe(true);
+    expect(insideLot(expanded, 0, 1800)).toBe(true);
+    expect(insideLot(expanded, -1200, -1800)).toBe(true);
+    expect(insideLot(expanded, 1400, 0)).toBe(false);
+    expect(insideLot(expanded, 0, 2000)).toBe(false);
+  });
 });
 
 /**
@@ -32,8 +42,10 @@ describe('insideLot', () => {
  * the middle.
  */
 describe('createLotPilot', () => {
-  it('drifts a figure of eight and stays on the asphalt of the shipped lot', () => {
-    const lot = config.lot;
+  it.each([
+    { name: 'original lot', lot: { ...config.lot, width: 1800, height: 2600 } },
+    { name: 'expanded lot', lot: config.lot },
+  ])('drifts a central figure of eight and stays on the asphalt of the $name', ({ lot }) => {
     const start = lotStartPose();
     const car = createCar(start.x, start.y, start.heading);
     const pilot = createLotPilot(lot);
@@ -58,7 +70,7 @@ describe('createLotPilot', () => {
       `y ${minY.toFixed(0)}..${maxY.toFixed(0)}`;
     expect(offSteps / total, report).toBeLessThan(0.02);
     expect(driftSteps / total, report).toBeGreaterThan(0.15);
-    expect(minY, report).toBeLessThan(-lot.height * 0.2);
-    expect(maxY, report).toBeGreaterThan(lot.height * 0.2);
+    expect(minY, report).toBeLessThan(-520);
+    expect(maxY, report).toBeGreaterThan(520);
   });
 });

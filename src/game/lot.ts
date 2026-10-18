@@ -68,8 +68,10 @@ export type LotPilot = (car: CarState, dt: number) => InputState;
  * falls behind, so the eight is drawn rather than cut across.
  */
 export function createLotPilot(lot: Lot, o: LotPilotOptions = PILOT): LotPilot {
-  const a = lot.width * 0.3;
-  const b = lot.height * 0.3;
+  // Demonstrate the same tight, catchable slides even when the practice area grows.
+  // Scaling the eight with a larger lot flattens its bends until the ghost stops drifting.
+  const a = Math.min(lot.width * 0.3, 540);
+  const b = Math.min(lot.height * 0.3, 780);
   let t = 0;
   return (car, dt) => {
     const wx = a * Math.sin(2 * t);
