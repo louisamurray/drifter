@@ -289,12 +289,17 @@ function captureFrame(): Promise<File | null> {
 
 // ---- Simulation -----------------------------------------------------------
 
-/** `manual` means the player is on the gas pedal: no corner lift, and tail lights when they lift. */
-function stepPhysics(dt: number, ctl: InputState, manual = false): void {
+/**
+ * `manual` means the player is on the gas pedal: no corner lift, and tail
+ * lights when they lift. `pointed` means a thumb is on the stick: the stick
+ * owns the heading, so road assist stays out of it until the thumb lets go.
+ */
+function stepPhysics(dt: number, ctl: InputState, manual = false, pointed = false): void {
   Object.assign(prev, car);
   const p = config.physics;
   const onRoad = mode === 'track';
-  const assist = onRoad ? assistYaw(car.heading, roadHeading, car.drifting, offTrack, p) : 0;
+  const assist =
+    onRoad && !pointed ? assistYaw(car.heading, roadHeading, car.drifting, offTrack, p) : 0;
   const forward = telemetry(car).forwardSpeed;
   const lift =
     onRoad && !manual
@@ -432,7 +437,7 @@ function update(dt: number): void {
       const ctl = debugState.autopilot
         ? ghostInput(dt, debugState.aggression)
         : input.sample(dt, config.input.steer, config.input.throttleSeconds);
-      stepPhysics(dt, ctl, manual);
+      stepPhysics(dt, ctl, manual, manual && input.held.stick);
       // Hold cues stay up for a new player until their first lap, or first banked chain on the lot
       const learning = best === 0 && (mode === 'track' ? laps.laps === 0 : score.score === 0);
       hud.setZones(learning, input.held);
