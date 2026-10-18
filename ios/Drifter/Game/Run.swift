@@ -260,7 +260,7 @@ final class Run {
             switch e {
             case .bank(let amount):
                 events.append(.popup(text: "+\(formatScore(amount))", kind: .bank))
-                let j = Config.juice
+                typealias j = Config.juice
                 let amp = min(j.shakeMax, j.shakeBase + log10(max(1, amount)) * j.shakePerDecade)
                 events.append(.shake(amplitude: amp, duration: j.shakeDuration))
                 events.append(.haptic(.bank))

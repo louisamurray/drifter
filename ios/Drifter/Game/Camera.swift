@@ -19,7 +19,7 @@ struct Camera {
     }
 
     mutating func move(toX tx: Double, y ty: Double, zoom tz: Double, dt: Double) {
-        let c = Config.camera
+        typealias c = Config.camera
         let k = Camera.smooth(c.followRate, dt)
         x += (tx - x) * k
         y += (ty - y) * k
@@ -28,7 +28,7 @@ struct Camera {
 
     /// Follow the car with velocity lead, zooming out with speed.
     mutating func follow(_ car: CarState, speed: Double, dt: Double) {
-        let c = Config.camera
+        typealias c = Config.camera
         let ratio = min(speed / Vehicle.standard.topSpeed, 1)
         let zoom = c.zoomRest + (c.zoomFast - c.zoomRest) * ratio
         let v = car.worldVelocity
