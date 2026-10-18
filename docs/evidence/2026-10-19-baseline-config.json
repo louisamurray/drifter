@@ -1,0 +1,282 @@
+{
+  "config": {
+    "camera": {
+      "followRate": 6,
+      "leadTime": 0.35,
+      "overviewFill": 0.86,
+      "zoomFast": 0.85,
+      "zoomRate": 2.5,
+      "zoomRest": 1.1
+    },
+    "input": {
+      "pad": {
+        "bandTop": 0.55,
+        "inset": 24,
+        "pedalGap": 12,
+        "pedalSize": 80,
+        "stickFullAngle": 0.6,
+        "stickRadius": 70
+      },
+      "steer": {
+        "releaseSeconds": 0.1,
+        "stage1": 0.5,
+        "stage1Seconds": 0.3,
+        "stage2Seconds": 0.5
+      },
+      "throttleSeconds": 0.15
+    },
+    "juice": {
+      "fullIntensityLateral": 220,
+      "shakeBase": 3,
+      "shakeDuration": 0.32,
+      "shakeMax": 14,
+      "shakePerDecade": 2.5,
+      "skidAlpha": 0.28,
+      "skidMaxPixels": 5000000,
+      "skidScale": 1.25,
+      "skidWidth": 6,
+      "smokeMax": 240,
+      "smokeRate": 26
+    },
+    "loop": {
+      "fixedDt": 0.016667,
+      "maxFrameDt": 0.25
+    },
+    "lot": {
+      "bayDepth": 90,
+      "bayPitch": 50,
+      "corner": 300,
+      "height": 2600,
+      "ring": 260,
+      "width": 1800
+    },
+    "offTrack": {
+      "accel": 0.5,
+      "drag": 3,
+      "grip": 0.6
+    },
+    "palette": {
+      "accent": "#ff5a2d",
+      "asphalt": "#1c2230",
+      "carBody": "#e8dcc4",
+      "carGlass": "#262e3d",
+      "carOutline": "rgba(13, 16, 22, 0.55)",
+      "carRoof": "#fffaf0",
+      "carShadow": "rgba(0, 0, 0, 0.3)",
+      "carWheel": "#0d1016",
+      "edgeLine": "#e8dcc4",
+      "hudText": "#f2eee6",
+      "offTrack": "#4a5238",
+      "offTrackSpeckDark": "#3f4630",
+      "offTrackSpeckLight": "#565f42",
+      "offTrackStripe": "#4d5539",
+      "skid": "rgba(12, 10, 8, 0.7)",
+      "smoke": "210, 205, 195",
+      "textHalo": "rgba(18, 23, 31, 0.75)",
+      "trackShadow": "rgba(0, 0, 0, 0.18)"
+    },
+    "physics": {
+      "accel": 420,
+      "alignGain": 0.7,
+      "assistDriftScale": 0.5,
+      "assistGain": 2.2,
+      "assistMaxYaw": 1.2,
+      "cornerAccel": 300,
+      "drag": 0.55,
+      "driftAccelBoost": 1.5,
+      "driftEnterLateral": 70,
+      "driftExitLateral": 35,
+      "driftMinForward": 110,
+      "driftYawBoost": 1.15,
+      "gripDrift": 3,
+      "gripNormal": 8,
+      "handbrakeDrag": 1.3,
+      "handbrakeGrip": 1.1,
+      "highSpeedSteerLoss": 0.4,
+      "liftBand": 40,
+      "liftDrag": 1.5,
+      "liftLookSeconds": 1.2,
+      "liftMinLook": 120,
+      "maxSpeed": 360,
+      "offGasGrip": 0.7,
+      "rolling": 40,
+      "steerFullSpeed": 140,
+      "steerGripLoss": 0.6,
+      "steerRate": 3.6,
+      "turnThrottleCut": 0.5,
+      "turnThrottleFrom": 0.5,
+      "yawResponse": 20
+    },
+    "render": {
+      "carScreenY": 0.6,
+      "maxDpr": 2
+    },
+    "scoring": {
+      "countdownSeconds": 3,
+      "graceSeconds": 1,
+      "handbrakeScoreScale": 0.35,
+      "lapBonus": 500,
+      "multiplierEvery": 2,
+      "multiplierMax": 5,
+      "multiplierStep": 0.5,
+      "offTrackKeep": 0.5,
+      "pointsScale": 1,
+      "runSeconds": 60
+    },
+    "track": {
+      "scale": 1,
+      "width": 130
+    }
+  },
+  "initialPose": {
+    "heading": 0,
+    "x": 0,
+    "y": 0
+  },
+  "scenarios": [
+    {
+      "name": "straight acceleration",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "sustained turn",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true
+          }
+        },
+        {
+          "frames": 360,
+          "keys": {
+            "gas": true,
+            "right": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "full-lock initiation",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true
+          }
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true,
+            "right": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "countersteer",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true
+          }
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true,
+            "right": true
+          }
+        },
+        {
+          "frames": 60,
+          "keys": {
+            "gas": true,
+            "left": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "lift and release",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true
+          }
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true,
+            "right": true
+          }
+        },
+        {
+          "frames": 180,
+          "keys": {}
+        }
+      ]
+    },
+    {
+      "name": "handbrake pull and release",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true
+          }
+        },
+        {
+          "frames": 30,
+          "keys": {
+            "brake": true,
+            "right": true
+          }
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "asphalt to grass and back",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true
+          }
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true,
+            "right": true
+          },
+          "surface": "grass"
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true
+          }
+        }
+      ]
+    }
+  ],
+  "scheme": "pedals"
+}

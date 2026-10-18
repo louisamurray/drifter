@@ -1,0 +1,676 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`legacy handling baseline at 60 Hz without road assist or corner lift > asphalt to grass and back 1`] = `
+{
+  "checkpoints": [
+    {
+      "car": {
+        "drifting": false,
+        "heading": 0,
+        "vx": 360,
+        "vy": 0,
+        "x": 871.283765,
+        "y": 0,
+        "yawRate": 0,
+      },
+      "frame": 180,
+      "input": {
+        "handbrake": false,
+        "steer": 0,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 360,
+        "lateralSpeed": 0,
+        "slipAngle": 0,
+        "speed": 360,
+      },
+    },
+    {
+      "car": {
+        "drifting": false,
+        "heading": 2.764213,
+        "vx": -40.050442,
+        "vy": 28.860676,
+        "x": 1088.374617,
+        "y": 75.971229,
+        "yawRate": 1.161652,
+      },
+      "frame": 300,
+      "input": {
+        "handbrake": false,
+        "steer": 1,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 47.86698,
+        "lateralSpeed": -12.071815,
+        "slipAngle": -0.247044,
+        "speed": 49.365742,
+      },
+    },
+    {
+      "car": {
+        "drifting": false,
+        "heading": 2.865404,
+        "vx": -346.356661,
+        "vy": 98.168546,
+        "x": 539.980304,
+        "y": 233.993215,
+        "yawRate": 0,
+      },
+      "frame": 420,
+      "input": {
+        "handbrake": false,
+        "steer": 0,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 360,
+        "lateralSpeed": 0,
+        "slipAngle": 0,
+        "speed": 360,
+      },
+    },
+  ],
+  "driftSeconds": 0.366667,
+  "maxSlip": 1.085882,
+}
+`;
+
+exports[`legacy handling baseline at 60 Hz without road assist or corner lift > countersteer 1`] = `
+{
+  "checkpoints": [
+    {
+      "car": {
+        "drifting": false,
+        "heading": 0,
+        "vx": 360,
+        "vy": 0,
+        "x": 871.283765,
+        "y": 0,
+        "yawRate": 0,
+      },
+      "frame": 180,
+      "input": {
+        "handbrake": false,
+        "steer": 0,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 360,
+        "lateralSpeed": 0,
+        "slipAngle": 0,
+        "speed": 360,
+      },
+    },
+    {
+      "car": {
+        "drifting": true,
+        "heading": 4.119098,
+        "vx": -119.321882,
+        "vy": -31.777855,
+        "x": 1191.591508,
+        "y": 231.508245,
+        "yawRate": 2.491478,
+      },
+      "frame": 300,
+      "input": {
+        "handbrake": false,
+        "steer": 1,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 93.059167,
+        "lateralSpeed": -81.163631,
+        "slipAngle": -0.717226,
+        "speed": 123.480944,
+      },
+    },
+    {
+      "car": {
+        "drifting": true,
+        "heading": 3.016745,
+        "vx": -290.891087,
+        "vy": -132.893161,
+        "x": 1008.688252,
+        "y": 45.573407,
+        "yawRate": -2.78155,
+      },
+      "frame": 360,
+      "input": {
+        "handbrake": false,
+        "steer": -1,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 272.078598,
+        "lateralSpeed": 168.081686,
+        "slipAngle": 0.553382,
+        "speed": 319.809657,
+      },
+    },
+  ],
+  "driftSeconds": 2.05,
+  "maxSlip": 1.103178,
+}
+`;
+
+exports[`legacy handling baseline at 60 Hz without road assist or corner lift > full-lock initiation 1`] = `
+{
+  "checkpoints": [
+    {
+      "car": {
+        "drifting": false,
+        "heading": 0,
+        "vx": 360,
+        "vy": 0,
+        "x": 871.283765,
+        "y": 0,
+        "yawRate": 0,
+      },
+      "frame": 180,
+      "input": {
+        "handbrake": false,
+        "steer": 0,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 360,
+        "lateralSpeed": 0,
+        "slipAngle": 0,
+        "speed": 360,
+      },
+    },
+    {
+      "car": {
+        "drifting": true,
+        "heading": 4.119098,
+        "vx": -119.321882,
+        "vy": -31.777855,
+        "x": 1191.591508,
+        "y": 231.508245,
+        "yawRate": 2.491478,
+      },
+      "frame": 300,
+      "input": {
+        "handbrake": false,
+        "steer": 1,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 93.059167,
+        "lateralSpeed": -81.163631,
+        "slipAngle": -0.717226,
+        "speed": 123.480944,
+      },
+    },
+  ],
+  "driftSeconds": 1.466667,
+  "maxSlip": 1.103178,
+}
+`;
+
+exports[`legacy handling baseline at 60 Hz without road assist or corner lift > handbrake pull and release 1`] = `
+{
+  "checkpoints": [
+    {
+      "car": {
+        "drifting": false,
+        "heading": 0,
+        "vx": 360,
+        "vy": 0,
+        "x": 871.283765,
+        "y": 0,
+        "yawRate": 0,
+      },
+      "frame": 180,
+      "input": {
+        "handbrake": false,
+        "steer": 0,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 360,
+        "lateralSpeed": 0,
+        "slipAngle": 0,
+        "speed": 360,
+      },
+    },
+    {
+      "car": {
+        "drifting": false,
+        "heading": 0.481577,
+        "vx": 129.564248,
+        "vy": -9.063289,
+        "x": 982.443246,
+        "y": -1.231755,
+        "yawRate": 1.798249,
+      },
+      "frame": 210,
+      "input": {
+        "handbrake": true,
+        "steer": 0.7,
+        "throttle": 0,
+      },
+      "telemetry": {
+        "forwardSpeed": 110.630423,
+        "lateralSpeed": -68.043713,
+        "slipAngle": -0.551415,
+        "speed": 129.880859,
+      },
+    },
+    {
+      "car": {
+        "drifting": false,
+        "heading": 0.571355,
+        "vx": 302.820866,
+        "vy": 194.677998,
+        "x": 1489.5693,
+        "y": 314.030625,
+        "yawRate": 0,
+      },
+      "frame": 330,
+      "input": {
+        "handbrake": false,
+        "steer": 0,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 360,
+        "lateralSpeed": -0.000001,
+        "slipAngle": 0,
+        "speed": 360,
+      },
+    },
+  ],
+  "driftSeconds": 0,
+  "maxSlip": 0.551415,
+}
+`;
+
+exports[`legacy handling baseline at 60 Hz without road assist or corner lift > lift and release 1`] = `
+{
+  "checkpoints": [
+    {
+      "car": {
+        "drifting": false,
+        "heading": 0,
+        "vx": 360,
+        "vy": 0,
+        "x": 871.283765,
+        "y": 0,
+        "yawRate": 0,
+      },
+      "frame": 180,
+      "input": {
+        "handbrake": false,
+        "steer": 0,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 360,
+        "lateralSpeed": 0,
+        "slipAngle": 0,
+        "speed": 360,
+      },
+    },
+    {
+      "car": {
+        "drifting": true,
+        "heading": 4.119098,
+        "vx": -119.321882,
+        "vy": -31.777855,
+        "x": 1191.591508,
+        "y": 231.508245,
+        "yawRate": 2.491478,
+      },
+      "frame": 300,
+      "input": {
+        "handbrake": false,
+        "steer": 1,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 93.059167,
+        "lateralSpeed": -81.163631,
+        "slipAngle": -0.717226,
+        "speed": 123.480944,
+      },
+    },
+    {
+      "car": {
+        "drifting": false,
+        "heading": 4.281215,
+        "vx": 0,
+        "vy": 0,
+        "x": 1160.194744,
+        "y": 194.43788,
+        "yawRate": 0,
+      },
+      "frame": 480,
+      "input": {
+        "handbrake": false,
+        "steer": 0,
+        "throttle": 0,
+      },
+      "telemetry": {
+        "forwardSpeed": 0,
+        "lateralSpeed": 0,
+        "slipAngle": 0,
+        "speed": 0,
+      },
+    },
+  ],
+  "driftSeconds": 1.633333,
+  "maxSlip": 1.103178,
+}
+`;
+
+exports[`legacy handling baseline at 60 Hz without road assist or corner lift > records the configuration and reproducible input sequences 1`] = `
+{
+  "initialPose": {
+    "heading": 0,
+    "x": 0,
+    "y": 0,
+  },
+  "input": {
+    "pad": {
+      "bandTop": 0.55,
+      "inset": 24,
+      "pedalGap": 12,
+      "pedalSize": 80,
+      "stickFullAngle": 0.6,
+      "stickRadius": 70,
+    },
+    "steer": {
+      "releaseSeconds": 0.1,
+      "stage1": 0.5,
+      "stage1Seconds": 0.3,
+      "stage2Seconds": 0.5,
+    },
+    "throttleSeconds": 0.15,
+  },
+  "loop": {
+    "fixedDt": 0.016667,
+    "maxFrameDt": 0.25,
+  },
+  "physics": {
+    "accel": 420,
+    "alignGain": 0.7,
+    "assistDriftScale": 0.5,
+    "assistGain": 2.2,
+    "assistMaxYaw": 1.2,
+    "cornerAccel": 300,
+    "drag": 0.55,
+    "driftAccelBoost": 1.5,
+    "driftEnterLateral": 70,
+    "driftExitLateral": 35,
+    "driftMinForward": 110,
+    "driftYawBoost": 1.15,
+    "gripDrift": 3,
+    "gripNormal": 8,
+    "handbrakeDrag": 1.3,
+    "handbrakeGrip": 1.1,
+    "highSpeedSteerLoss": 0.4,
+    "liftBand": 40,
+    "liftDrag": 1.5,
+    "liftLookSeconds": 1.2,
+    "liftMinLook": 120,
+    "maxSpeed": 360,
+    "offGasGrip": 0.7,
+    "rolling": 40,
+    "steerFullSpeed": 140,
+    "steerGripLoss": 0.6,
+    "steerRate": 3.6,
+    "turnThrottleCut": 0.5,
+    "turnThrottleFrom": 0.5,
+    "yawResponse": 20,
+  },
+  "scenarios": [
+    {
+      "name": "straight acceleration",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true,
+          },
+        },
+      ],
+    },
+    {
+      "name": "sustained turn",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true,
+          },
+        },
+        {
+          "frames": 360,
+          "keys": {
+            "gas": true,
+            "right": true,
+          },
+        },
+      ],
+    },
+    {
+      "name": "full-lock initiation",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true,
+          },
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true,
+            "right": true,
+          },
+        },
+      ],
+    },
+    {
+      "name": "countersteer",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true,
+          },
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true,
+            "right": true,
+          },
+        },
+        {
+          "frames": 60,
+          "keys": {
+            "gas": true,
+            "left": true,
+          },
+        },
+      ],
+    },
+    {
+      "name": "lift and release",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true,
+          },
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true,
+            "right": true,
+          },
+        },
+        {
+          "frames": 180,
+          "keys": {},
+        },
+      ],
+    },
+    {
+      "name": "handbrake pull and release",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true,
+          },
+        },
+        {
+          "frames": 30,
+          "keys": {
+            "brake": true,
+            "right": true,
+          },
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true,
+          },
+        },
+      ],
+    },
+    {
+      "name": "asphalt to grass and back",
+      "segments": [
+        {
+          "frames": 180,
+          "keys": {
+            "gas": true,
+          },
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true,
+            "right": true,
+          },
+          "surface": "grass",
+        },
+        {
+          "frames": 120,
+          "keys": {
+            "gas": true,
+          },
+        },
+      ],
+    },
+  ],
+  "scheme": "pedals",
+  "surfaces": {
+    "asphalt": {
+      "accel": 1,
+      "drag": 1,
+      "grip": 1,
+    },
+    "grass": {
+      "accel": 0.5,
+      "drag": 3,
+      "grip": 0.6,
+    },
+  },
+}
+`;
+
+exports[`legacy handling baseline at 60 Hz without road assist or corner lift > straight acceleration 1`] = `
+{
+  "checkpoints": [
+    {
+      "car": {
+        "drifting": false,
+        "heading": 0,
+        "vx": 360,
+        "vy": 0,
+        "x": 871.283765,
+        "y": 0,
+        "yawRate": 0,
+      },
+      "frame": 180,
+      "input": {
+        "handbrake": false,
+        "steer": 0,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 360,
+        "lateralSpeed": 0,
+        "slipAngle": 0,
+        "speed": 360,
+      },
+    },
+  ],
+  "driftSeconds": 0,
+  "maxSlip": 0,
+}
+`;
+
+exports[`legacy handling baseline at 60 Hz without road assist or corner lift > sustained turn 1`] = `
+{
+  "checkpoints": [
+    {
+      "car": {
+        "drifting": false,
+        "heading": 0,
+        "vx": 360,
+        "vy": 0,
+        "x": 871.283765,
+        "y": 0,
+        "yawRate": 0,
+      },
+      "frame": 180,
+      "input": {
+        "handbrake": false,
+        "steer": 0,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 360,
+        "lateralSpeed": 0,
+        "slipAngle": 0,
+        "speed": 360,
+      },
+    },
+    {
+      "car": {
+        "drifting": true,
+        "heading": 15.073798,
+        "vx": -26.820949,
+        "vy": 133.211631,
+        "x": 1255.836119,
+        "y": 193.973589,
+        "yawRate": 2.738555,
+      },
+      "frame": 540,
+      "input": {
+        "handbrake": false,
+        "steer": 1,
+        "throttle": 1,
+      },
+      "telemetry": {
+        "forwardSpeed": 100.534644,
+        "lateralSpeed": -91.419293,
+        "slipAngle": -0.737947,
+        "speed": 135.884885,
+      },
+    },
+  ],
+  "driftSeconds": 5.466667,
+  "maxSlip": 1.103178,
+}
+`;
