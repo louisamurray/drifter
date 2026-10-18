@@ -87,6 +87,8 @@ let best = loadBest();
 let newBest = false;
 let countdownLeft = 0;
 let lastTick = 0;
+/** What the car looked like it was doing on the last physics step, for the renderer. */
+const carLook = { steer: 0, roll: 0, brake: 0 };
 
 const skids = new SkidLayer(track);
 const smoke = new SmokePool(config.juice.smokeMax);
@@ -213,6 +215,8 @@ function stepPhysics(dt: number, ctl: InputState): void {
   const forward = telemetry(car).forwardSpeed;
   const lift = cornerLift(forward, minRadiusAhead(track, trackIndex, liftLookahead(forward, p)), p);
   stepCar(car, ctl, dt, p, offTrack ? grass : ROAD, assist, lift);
+  carLook.steer = ctl.steer;
+  carLook.brake = ctl.handbrake ? 1 : lift;
   const q = nearestOnTrack(track, car.x, car.y);
   trackIndex = q.index;
   const tp = track.points[q.index];
@@ -221,6 +225,7 @@ function stepPhysics(dt: number, ctl: InputState): void {
   const lapsBefore = laps.laps;
   updateLaps(laps, q.s, track.length, dt);
   const t = telemetry(car);
+  carLook.roll = Math.max(-1, Math.min(1, t.lateralSpeed / config.juice.fullIntensityLateral));
   layRubber(t.lateralSpeed, dt);
   audio.update({
     speedRatio: t.speed / config.physics.maxSpeed,
@@ -379,7 +384,7 @@ function render(alpha: number): void {
   drawTrack(ctx, track);
   skids.draw(ctx);
   drawSmoke(ctx, smoke);
-  drawCar(ctx, x, y, heading);
+  drawCar(ctx, x, y, heading, carLook);
   endWorld(ctx);
 
   if (state === 'playing') {

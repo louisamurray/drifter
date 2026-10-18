@@ -171,6 +171,7 @@ export const config = {
     hudText: '#f2eee6',
     carBody: '#e8dcc4',
     carRoof: '#fffaf0',
+    carGlass: '#262e3d',
     carWheel: '#0d1016',
     carOutline: 'rgba(13, 16, 22, 0.55)',
     smoke: '210, 205, 195',

@@ -167,12 +167,83 @@ function drawStartLine(ctx: CanvasRenderingContext2D, track: Track): void {
 const CAR_LENGTH = 40;
 const CAR_WIDTH = 20;
 
+/** Per-frame cues that make the car read as driven, not just moved. */
+export interface CarLook {
+  /** Steering input -1..1; turns the front wheels. */
+  steer: number;
+  /** Signed lateral speed ratio -1..1; shifts the body on its wheels in a slide. */
+  roll: number;
+  /** 0..1 tail-light intensity: handbrake or corner lift. */
+  brake: number;
+}
+
+const STILL: CarLook = { steer: 0, roll: 0, brake: 0 };
+
+function roundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+/** Body outline: wide shoulders at the rear tapering to a rounded nose. */
+function bodyPath(ctx: CanvasRenderingContext2D): void {
+  const L = CAR_LENGTH / 2;
+  const W = CAR_WIDTH / 2;
+  const nose = W * 0.72;
+  ctx.beginPath();
+  ctx.moveTo(-L + 3, -W);
+  ctx.lineTo(L * 0.3, -W);
+  ctx.quadraticCurveTo(L * 0.8, -W, L - 2, -nose);
+  ctx.quadraticCurveTo(L, 0, L - 2, nose);
+  ctx.quadraticCurveTo(L * 0.8, W, L * 0.3, W);
+  ctx.lineTo(-L + 3, W);
+  ctx.quadraticCurveTo(-L, W, -L, W - 3);
+  ctx.lineTo(-L, -W + 3);
+  ctx.quadraticCurveTo(-L, -W, -L + 3, -W);
+  ctx.closePath();
+}
+
+function wheel(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  len: number,
+  angle: number,
+): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.fillStyle = config.palette.carWheel;
+  roundedRect(ctx, -len / 2, -2.6, len, 5.2, 1.6);
+  ctx.fill();
+  ctx.restore();
+}
+
 export function drawCar(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   heading: number,
+  look: CarLook = STILL,
 ): void {
+  const p = config.palette;
+  const L = CAR_LENGTH / 2;
+  const W = CAR_WIDTH / 2;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(heading);
@@ -182,27 +253,81 @@ export function drawCar(
   ctx.rotate(-heading);
   ctx.translate(2, 4);
   ctx.rotate(heading);
-  ctx.fillStyle = config.palette.carShadow;
-  ctx.fillRect(-CAR_LENGTH / 2, -CAR_WIDTH * 0.62, CAR_LENGTH, CAR_WIDTH * 1.24);
+  ctx.fillStyle = p.carShadow;
+  bodyPath(ctx);
+  ctx.fill();
   ctx.restore();
 
-  // Rear wheels slightly wider than the body, drawn first so the body sits on them
-  ctx.fillStyle = config.palette.carWheel;
-  ctx.fillRect(-CAR_LENGTH * 0.42, -CAR_WIDTH * 0.62, 9, CAR_WIDTH * 1.24);
-  ctx.fillRect(CAR_LENGTH * 0.18, -CAR_WIDTH * 0.52, 8, CAR_WIDTH * 1.04);
+  // Wheels under the body. Rears sit wider so smoke and rubber visibly come
+  // from them; fronts turn with the steer input.
+  const rearX = -L * 0.72;
+  const frontX = L * 0.52;
+  wheel(ctx, rearX, -W * 1.1, 10, 0);
+  wheel(ctx, rearX, W * 1.1, 10, 0);
+  const steerAngle = look.steer * 0.42;
+  wheel(ctx, frontX, -W * 0.98, 8.5, steerAngle);
+  wheel(ctx, frontX, W * 0.98, 8.5, steerAngle);
 
-  // Body with a dark outline so it reads against the cream edge lines
-  ctx.fillStyle = config.palette.carBody;
-  ctx.fillRect(-CAR_LENGTH / 2, -CAR_WIDTH / 2, CAR_LENGTH, CAR_WIDTH);
-  ctx.strokeStyle = config.palette.carOutline;
+  // Body shifts on its wheels in a slide: a hint of roll without a 3D car
+  ctx.translate(0, look.roll * 1.6);
+
+  ctx.fillStyle = p.carBody;
+  bodyPath(ctx);
+  ctx.fill();
+  ctx.strokeStyle = p.carOutline;
   ctx.lineWidth = 1.5;
-  ctx.strokeRect(-CAR_LENGTH / 2, -CAR_WIDTH / 2, CAR_LENGTH, CAR_WIDTH);
+  ctx.stroke();
 
-  // Roof, lighter and forward of centre so heading is unambiguous
-  ctx.fillStyle = config.palette.carRoof;
-  ctx.fillRect(-CAR_LENGTH * 0.1, -CAR_WIDTH * 0.32, CAR_LENGTH * 0.38, CAR_WIDTH * 0.64);
+  // Rear wing: a dark bar across the tail
+  ctx.fillStyle = p.carWheel;
+  roundedRect(ctx, -L + 1, -W * 1.05, 3.2, CAR_WIDTH * 1.05, 1);
+  ctx.fill();
+
+  // Glass: windscreen ahead, rear window behind, cream roof between so the
+  // lighter patch still points the way the car faces
+  ctx.fillStyle = p.carGlass;
+  ctx.beginPath();
+  ctx.moveTo(L * 0.2, -W * 0.74);
+  ctx.lineTo(L * 0.5, -W * 0.56);
+  ctx.lineTo(L * 0.5, W * 0.56);
+  ctx.lineTo(L * 0.2, W * 0.74);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-L * 0.22, -W * 0.74);
+  ctx.lineTo(-L * 0.42, -W * 0.6);
+  ctx.lineTo(-L * 0.42, W * 0.6);
+  ctx.lineTo(-L * 0.22, W * 0.74);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = p.carRoof;
+  ctx.fillRect(-L * 0.22, -W * 0.74, L * 0.42, CAR_WIDTH * 0.74);
+
+  // Headlights
+  ctx.fillStyle = p.carRoof;
+  ctx.fillRect(L - 4, -nose(W) - 1, 2.5, 3);
+  ctx.fillRect(L - 4, nose(W) - 2, 2.5, 3);
+
+  // Tail lights: dim at rest, lit on the handbrake or a corner lift
+  const lit = look.brake;
+  ctx.fillStyle = p.accent;
+  ctx.globalAlpha = 0.35 + 0.65 * lit;
+  ctx.fillRect(-L + 0.5, -W * 0.95, 2.2, 4);
+  ctx.fillRect(-L + 0.5, W * 0.95 - 4, 2.2, 4);
+  if (lit > 0.05) {
+    ctx.globalAlpha = 0.2 * lit;
+    ctx.beginPath();
+    ctx.arc(-L - 1, -W * 0.95 + 2, 4.5, 0, Math.PI * 2);
+    ctx.arc(-L - 1, W * 0.95 - 2, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
 
   ctx.restore();
+}
+
+function nose(halfWidth: number): number {
+  return halfWidth * 0.72 - 1.5;
 }
 
 export function drawDebug(
