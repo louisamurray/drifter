@@ -1,0 +1,78 @@
+{
+  "scenarios": [
+    {
+      "driftSeconds": 0,
+      "forwardSpeed": 36.545400187573904,
+      "heading": 0,
+      "lateralSpeed": 0,
+      "maxSlip": 0,
+      "name": "straight",
+      "seconds": 20,
+      "slip": 0,
+      "speed": 36.545400187573904,
+      "timeTo100": 5.75,
+      "x": 586.0520928206289,
+      "y": 0,
+      "yawRate": 0
+    },
+    {
+      "driftSeconds": 0,
+      "forwardSpeed": 18.676650693749064,
+      "heading": 3.0401579917359456,
+      "lateralSpeed": -1.7974526975578302,
+      "maxSlip": 0.09594513886401225,
+      "name": "partThrottleTurn",
+      "seconds": 10,
+      "slip": -0.09594513886401225,
+      "speed": 18.762945326794387,
+      "x": 16.852273425449702,
+      "y": 62.645679686720207,
+      "yawRate": 0.41851718542545574
+    },
+    {
+      "driftSeconds": 4.2166666666666659,
+      "forwardSpeed": 22.350444296270425,
+      "heading": 2.2739725629450431,
+      "lateralSpeed": -5.5501355521547309,
+      "maxSlip": 0.55039514978465087,
+      "name": "powerOver",
+      "seconds": 5,
+      "slip": -0.24339994860922534,
+      "speed": 23.029250202470315,
+      "x": 40.350161407670718,
+      "y": 72.069984289448982,
+      "yawRate": 0.20527182862094917
+    },
+    {
+      "driftSeconds": 1.3916666666666642,
+      "forwardSpeed": 29.556756342181412,
+      "heading": 0.61170813837003868,
+      "lateralSpeed": -0.0039842672498978677,
+      "maxSlip": 0.49629423934258637,
+      "name": "handbrakeRelease",
+      "seconds": 4,
+      "slip": -0.00013480055726138089,
+      "speed": 29.556756610722136,
+      "timeTo100": 3.375,
+      "x": 80.301567281270252,
+      "y": 43.490449073914135,
+      "yawRate": 0.00085849660895494879
+    },
+    {
+      "driftSeconds": 0,
+      "forwardSpeed": 9.8841175602332729,
+      "heading": 0,
+      "lateralSpeed": 0,
+      "maxSlip": 0,
+      "name": "grass",
+      "seconds": 5,
+      "slip": 0,
+      "speed": 9.8841175602332729,
+      "x": 24.975691450656655,
+      "y": 0,
+      "yawRate": 0
+    }
+  ],
+  "source": "ios\/Drifter\/Game\/Vehicle.swift",
+  "timestep": 0.0083333333333333332
+}
