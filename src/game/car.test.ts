@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { config } from '../config';
-import { createCar, stepCar, telemetry } from './car';
+import { cornerLift, cornerSpeed, createCar, liftLookahead, stepCar, telemetry } from './car';
 
 const p = config.physics;
 const dt = 1 / 60;
@@ -68,5 +68,36 @@ describe('stepCar', () => {
     const car = run(120, 0);
     run(60 * 20, 0, 0, car);
     expect(telemetry(car).speed).toBe(0);
+  });
+});
+
+describe('corner lift', () => {
+  it('allows top speed on a straight and less through a tight corner', () => {
+    expect(cornerSpeed(Infinity, p)).toBe(p.maxSpeed);
+    expect(cornerSpeed(95, p)).toBeLessThan(p.maxSpeed * 0.6);
+    expect(cornerSpeed(95, p)).toBeGreaterThan(p.driftMinForward);
+  });
+
+  it('is zero at or below the corner speed and ramps to full over the band', () => {
+    const limit = cornerSpeed(120, p);
+    expect(cornerLift(limit, 120, p)).toBe(0);
+    expect(cornerLift(limit + p.liftBand / 2, 120, p)).toBeCloseTo(0.5);
+    expect(cornerLift(limit + p.liftBand * 3, 120, p)).toBe(1);
+  });
+
+  it('looks further ahead at speed with a floor when slow', () => {
+    expect(liftLookahead(0, p)).toBe(p.liftMinLook);
+    expect(liftLookahead(p.maxSpeed, p)).toBeCloseTo(p.maxSpeed * p.liftLookSeconds);
+  });
+
+  it('sheds speed when applied and leaves the car alone when not', () => {
+    const free = run(240, 0);
+    const lifted = run(240, 0);
+    for (let i = 0; i < 60; i++) {
+      stepCar(free, { throttle: 1, steer: 0, handbrake: false }, dt, p);
+      stepCar(lifted, { throttle: 1, steer: 0, handbrake: false }, dt, p, undefined, 0, 1);
+    }
+    expect(telemetry(free).speed).toBeCloseTo(p.maxSpeed, 0);
+    expect(telemetry(lifted).speed).toBeLessThan(p.maxSpeed * 0.9);
   });
 });

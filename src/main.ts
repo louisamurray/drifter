@@ -7,7 +7,9 @@ import type { GameState } from './core/state';
 import { autopilot } from './game/autopilot';
 import {
   assistYaw,
+  cornerLift,
   createCar,
+  liftLookahead,
   ROAD,
   stepCar,
   telemetry,
@@ -24,7 +26,14 @@ import {
   updateShake,
 } from './game/particles';
 import { createScore, drainEvents, multiplierProgress, updateScore } from './game/scoring';
-import { buildTrack, CIRCUIT, isOffTrack, nearestOnTrack, startPose } from './game/track';
+import {
+  buildTrack,
+  CIRCUIT,
+  isOffTrack,
+  minRadiusAhead,
+  nearestOnTrack,
+  startPose,
+} from './game/track';
 import { createCamera, moveCameraTo, trackOverview, updateCamera } from './render/camera';
 import {
   beginWorld,
@@ -70,6 +79,7 @@ let laps = createLapState();
 let score = createScore();
 let offTrack = false;
 let roadHeading = start.heading;
+let trackIndex = 0;
 let popups: Popup[] = [];
 let best = loadBest();
 let newBest = false;
@@ -92,6 +102,7 @@ function resetRun(): void {
   score = createScore();
   offTrack = false;
   roadHeading = start.heading;
+  trackIndex = 0;
   popups = [];
   newBest = false;
   everDrifted = false;
@@ -196,9 +207,13 @@ function captureFrame(): Promise<File | null> {
 
 function stepPhysics(dt: number, ctl: InputState): void {
   Object.assign(prev, car);
-  const assist = assistYaw(car.heading, roadHeading, car.drifting, offTrack, config.physics);
-  stepCar(car, ctl, dt, config.physics, offTrack ? grass : ROAD, assist);
+  const p = config.physics;
+  const assist = assistYaw(car.heading, roadHeading, car.drifting, offTrack, p);
+  const forward = telemetry(car).forwardSpeed;
+  const lift = cornerLift(forward, minRadiusAhead(track, trackIndex, liftLookahead(forward, p)), p);
+  stepCar(car, ctl, dt, p, offTrack ? grass : ROAD, assist, lift);
   const q = nearestOnTrack(track, car.x, car.y);
+  trackIndex = q.index;
   const tp = track.points[q.index];
   if (tp) roadHeading = Math.atan2(tp.ty, tp.tx);
   offTrack = isOffTrack(track, q.distance);

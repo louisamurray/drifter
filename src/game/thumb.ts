@@ -6,10 +6,21 @@ import {
   type Side,
   type SteerRamp,
 } from '../core/input';
-import { angleDelta, assistYaw, createCar, ROAD, stepCar, type CarState } from './car';
+import {
+  angleDelta,
+  assistYaw,
+  cornerLift,
+  createCar,
+  liftLookahead,
+  ROAD,
+  stepCar,
+  telemetry,
+  type CarState,
+} from './car';
 import { createLapState, updateLaps } from './laps';
 import {
   isOffTrack,
+  minRadiusAhead,
   nearestOnTrack,
   startPose,
   type Track,
@@ -33,6 +44,11 @@ export interface ThumbProfile {
   lookaheadPx: number;
   /** Heading error in radians tolerated before a side is held. */
   deadband: number;
+  /**
+   * Seconds of lead: the thumb judges where the nose will be pointing this far
+   * ahead, from the current yaw rate. Humans add lead to cover their own lag.
+   */
+  anticipationSeconds: number;
 }
 
 /**
@@ -48,6 +64,9 @@ export function visibleAhead(viewportHeight: number): number {
   );
 }
 
+/** Lookahead cap as a multiple of the tightest radius ahead. */
+const APEX_LOOK = 2;
+
 /** Which side the thumb holds this step, or null for none. */
 export type ThumbDriver = (car: CarState) => Side | null;
 
@@ -57,20 +76,27 @@ export function createThumb(track: Track, profile: ThumbProfile, dt: number): Th
   const queue: (Side | null)[] = [];
   let step = 0;
   let decision: Side | null = null;
+  let prevHeading: number | null = null;
 
   return (car) => {
-    if (step % decideSteps === 0) decision = decide(track, car, profile);
+    const yawRate = prevHeading === null ? 0 : angleDelta(prevHeading, car.heading) / dt;
+    prevHeading = car.heading;
+    if (step % decideSteps === 0) decision = decide(track, car, profile, yawRate);
     step += 1;
     queue.push(decision);
     return queue.length > delaySteps ? (queue.shift() ?? null) : null;
   };
 }
 
-function decide(track: Track, car: CarState, profile: ThumbProfile): Side | null {
+function decide(track: Track, car: CarState, profile: ThumbProfile, yawRate: number): Side | null {
   const q = nearestOnTrack(track, car.x, car.y);
-  const target = pointAhead(track, q, profile.lookaheadPx);
+  // Look up the road, but no further than the apex of a coming corner: aiming
+  // past an apex cuts across the grass, which players can see and do not do.
+  const apex = APEX_LOOK * minRadiusAhead(track, q.index, profile.lookaheadPx);
+  const target = pointAhead(track, q, Math.min(profile.lookaheadPx, apex));
   if (!target) return null;
-  const err = angleDelta(car.heading, Math.atan2(target.y - car.y, target.x - car.x));
+  const nose = car.heading + yawRate * profile.anticipationSeconds;
+  const err = angleDelta(nose, Math.atan2(target.y - car.y, target.x - car.x));
   if (err > profile.deadband) return 'right';
   if (err < -profile.deadband) return 'left';
   return null;
@@ -101,8 +127,8 @@ export interface DriveResult {
 
 /**
  * Drive the circuit for `seconds` exactly as a player's thumb would reach the
- * physics: held side -> `resolveControls` -> steering ramp -> road assist ->
- * `stepCar`, with the grass surface when off the road.
+ * physics: held side -> `resolveControls` -> steering ramp -> road assist and
+ * corner lift -> `stepCar`, with the grass surface when off the road.
  */
 export function driveThumb(
   track: Track,
@@ -118,6 +144,7 @@ export function driveThumb(
   const laps = createLapState();
   const input: InputState = { throttle: 0, steer: 0, handbrake: false };
   let roadHeading = start.heading;
+  let trackIndex = 0;
   let offTrack = false;
   let offSteps = 0;
   let driftSteps = 0;
@@ -128,8 +155,15 @@ export function driveThumb(
     const side = thumb(car);
     advanceControls(input, resolveControls(side ? [side] : [], false, false, false), dt, ramp);
     const assist = assistYaw(car.heading, roadHeading, car.drifting, offTrack, p);
-    stepCar(car, input, dt, p, offTrack ? config.offTrack : ROAD, assist);
+    const forward = telemetry(car).forwardSpeed;
+    const lift = cornerLift(
+      forward,
+      minRadiusAhead(track, trackIndex, liftLookahead(forward, p)),
+      p,
+    );
+    stepCar(car, input, dt, p, offTrack ? config.offTrack : ROAD, assist, lift);
     const q = nearestOnTrack(track, car.x, car.y);
+    trackIndex = q.index;
     const tp = track.points[q.index];
     if (tp) roadHeading = Math.atan2(tp.ty, tp.tx);
     const wasOff = offTrack;

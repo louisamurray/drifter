@@ -58,6 +58,8 @@ export function stepCar(
   surface: Surface = ROAD,
   /** Extra yaw (rad/s) from road assist. Applied only when the player is not steering. */
   assistYaw = 0,
+  /** Corner lift, 0 (none) to 1 (throttle fully off, lift drag fully on). */
+  lift = 0,
 ): CarState {
   // Decompose in the current heading frame
   let fx = Math.cos(car.heading);
@@ -76,9 +78,9 @@ export function stepCar(
   // Longitudinal
   const accel = (car.drifting ? p.accel * p.driftAccelBoost : p.accel) * surface.accel;
   const turn = Math.max(0, Math.abs(input.steer) - p.turnThrottleFrom) / (1 - p.turnThrottleFrom);
-  const throttle = input.throttle * (1 - p.turnThrottleCut * Math.min(1, turn));
+  const throttle = input.throttle * (1 - p.turnThrottleCut * Math.min(1, turn)) * (1 - lift);
   vF += accel * throttle * dt;
-  const drag = p.drag * surface.drag + (input.handbrake ? p.handbrakeDrag : 0);
+  const drag = p.drag * surface.drag + (input.handbrake ? p.handbrakeDrag : 0) + p.liftDrag * lift;
   vF -= drag * vF * dt;
   if (input.throttle === 0) {
     const roll = p.rolling * dt;
@@ -140,4 +142,25 @@ export function assistYaw(
   const err = angleDelta(heading, roadHeading);
   const yaw = Math.max(-p.assistMaxYaw, Math.min(p.assistMaxYaw, err * p.assistGain));
   return drifting ? yaw * p.assistDriftScale : yaw;
+}
+
+/** Speed (px/s) the car can carry round a centreline of radius `radius`. */
+export function cornerSpeed(radius: number, p: PhysicsConfig): number {
+  return Math.min(p.maxSpeed, Math.sqrt(p.cornerAccel * radius));
+}
+
+/**
+ * Corner lift amount, 0 to 1, from the forward speed and the tightest radius
+ * within the lookahead. Ramps in over `liftBand` px/s above the corner speed so
+ * the throttle eases rather than snaps.
+ */
+export function cornerLift(forwardSpeed: number, minRadius: number, p: PhysicsConfig): number {
+  const over = forwardSpeed - cornerSpeed(minRadius, p);
+  if (over <= 0) return 0;
+  return Math.min(1, over / p.liftBand);
+}
+
+/** How far ahead the lift looks at this speed, in world px. */
+export function liftLookahead(forwardSpeed: number, p: PhysicsConfig): number {
+  return Math.max(p.liftMinLook, forwardSpeed * p.liftLookSeconds);
 }

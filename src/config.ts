@@ -77,6 +77,18 @@ export const config = {
     assistGain: 2.2,
     assistMaxYaw: 1.2,
     assistDriftScale: 0.5,
+    /**
+     * Corner lift: the automatic throttle eases off when the car is faster
+     * than the road ahead can take. Corner speed for a radius R is
+     * sqrt(cornerAccel * R), capped at maxSpeed. The car looks liftLookSeconds
+     * of travel ahead (at least liftMinLook px), lifts fully once it is
+     * liftBand px/s over the limit, and sheds speed with liftDrag while lifted.
+     */
+    cornerAccel: 300,
+    liftLookSeconds: 1.2,
+    liftMinLook: 120,
+    liftBand: 40,
+    liftDrag: 1.5,
   },
   track: {
     /** Road width in world px. */
