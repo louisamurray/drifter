@@ -1,17 +1,17 @@
 # Drifter — Game Design & Build Plan
 
-A simple, satisfying car-drifting game for mobile browsers. Top-down, one-thumb controls, short sessions, instant restart.
+A simple, satisfying car-drifting game for mobile browsers. Top-down, thumb controls, short sessions, instant restart.
 
 ---
 
 ## 1. Vision
 
-**One-line pitch:** Hold to throttle, tilt your thumb to steer, chain drifts around a looping track for score before the timer runs out.
+**One-line pitch:** Hold a side to steer, or point a stick and hold the gas, and chain drifts around a looping track for score before the timer runs out.
 
 **Design pillars**
 
 1. **Feels good in 5 seconds.** The car must feel slidey and controllable on the very first touch. Everything else is secondary.
-2. **One thumb, portrait.** Playable on a bus with one hand. No virtual joysticks with eight buttons.
+2. **Thumbs only, portrait.** Playable on a bus with one hand. The two-thumb scheme is two pedals and a stick, nothing more.
 3. **Short loop, high replay.** 60-second runs, score multiplier for chained drifts, local high score. Restart in one tap.
 4. **Zero friction.** Loads in under 2 seconds on 4G, no login, no install, works offline after first load (PWA).
 
@@ -23,7 +23,7 @@ A simple, satisfying car-drifting game for mobile browsers. Top-down, one-thumb 
 
 ### 2.1 Camera & view
 - Top-down 2D, camera follows the car with slight lead in the direction of travel and a gentle zoom-out at high speed.
-- Portrait orientation locked by layout (landscape shows a "rotate your phone" overlay).
+- Portrait first. Landscape is not blocked, but it shows less than a second of road ahead at top speed, so the naive thumb in the test suite is run on both orientations to keep it drivable.
 - Track is a closed loop with a mix of hairpins, sweepers and a long straight, about 3 to 4 screen-heights per lap.
 
 ### 2.2 Controls (mobile first)
@@ -64,7 +64,7 @@ Simple velocity-based model, tuned by feel:
 - **Corner lift.** The automatic throttle eases off when the car is faster than the tightest corner within about a second of travel can take, with a little extra drag while lifted. Corner speed is `sqrt(cornerAccel × radius)`, so the hairpin is entered at roughly half of top speed and the straight is still flat out. The player never brakes for a corner; they decide when to slide, which the lift does not prevent. This is what makes a 200 to 250 ms thumb able to stay on the road.
 - **Tuned against drivers, not feelings.** Two drivers run in the test suite. A cautious autopilot with a handbrake must lap the circuit (it feeds the physics directly, so it checks the track, not the controls). A naive thumb (200 to 250 ms reaction, re-decides ten times a second, looks somewhere in the visible road but no further than the next apex, leads its own lag by judging where the nose will be pointing a reaction time ahead, holds a side when the nose is off the spot, never brakes) drives through the real input path: held side, steering ramp, road assist, corner lift, then the physics. It is run for a portrait and a landscape phone, since landscape shows less than a second of road ahead at top speed. The bar is under 15% of the run off the road, at least two laps, and at least 10% of the run drifting so the car cannot be made safe by making it dull. Without the corner lift the thumb spends about half of every run on the grass; with it the worst profile is on the grass about an eighth of the time.
 
-Tunables live in one config object so tuning is a one-file job: `maxSpeed`, `accel`, `drag`, `gripNormal`, `gripDrift`, `steerRate`, `driftThreshold`, `cornerAccel`.
+Tunables live in one config object so tuning is a one-file job, grouped as `loop`, `render`, `input`, `physics`, `track`, `lot`, `offTrack`, `scoring`, `juice`, `camera` and `palette`. The physics, camera and steering groups are mutable at runtime so the debug panel (section 6) can adjust them on a phone.
 
 ### 2.4 Track & collisions
 - Track defined as a polyline centreline plus width. Rendered as asphalt on grass with painted edges.
@@ -81,7 +81,7 @@ Tunables live in one config object so tuning is a one-file job: `maxSpeed`, `acc
 - Run ends when a 60-second timer hits zero. Final score compared against local best.
 
 ### 2.6 Game loop & screens
-1. **Title** — ghost car laps the empty track with a thumb-drag hint (see section 3.8), "Tap to drive", best score, sound toggle, and a mode toggle: circuit or free drift (see section 2.7). A controls toggle above the hint picks one thumb or two.
+1. **Title** — ghost car laps the empty track with a hint for the chosen controls (see section 3.8), "Tap to drive", best score, sound toggle, and a mode toggle: circuit or free drift (see section 2.7). A controls toggle above the hint picks one thumb or two.
 2. **Countdown** — 3-2-1 overlaid on the track, car static.
 3. **Playing** — HUD: timer (top centre), score (top left), multiplier badge (top right, pulses when it increases), current chain score floating near the car.
 4. **Game over** — camera zooms out to show the whole track with the player's rubber on it, then final score, best score, "new best" callout, Restart button (large, bottom), Share button (Web Share API sending the zoomed-out frame as an image plus score text).
@@ -99,7 +99,7 @@ Everything the player does is written onto the asphalt as rubber. The car is sma
 
 ### 3.2 Principles
 1. **Quiet world, loud rubber.** Track, grass and car sit in low-saturation tones. Skid marks, smoke and score pops are the only high-contrast elements during play.
-2. **Nothing precious under the thumb.** In portrait with drag-to-steer, the thumb and forearm cover roughly the bottom third of the screen. The car sits at about 60% of screen height, the HUD lives in the top safe area, and no information is ever placed low during play.
+2. **Nothing precious under the thumb.** In portrait the thumb and forearm cover roughly the bottom third of the screen, and in the two-thumb scheme that is where the controls are drawn. The car sits at about 60% of screen height, the HUD lives in the top safe area, and no information is ever placed low during play.
 3. **Read it at a glance or don't show it.** The player watches the car, not the screen corners. Every HUD element must work in peripheral vision: large, few, high contrast, and changing shape or motion (not just number) when something matters.
 
 ### 3.3 Palette (roles, not moods)
@@ -141,10 +141,10 @@ In priority order:
 4. **Game over.** Camera zooms out to show the whole track with the player's rubber on it, then score and buttons overlay. This frame is the share image: the Web Share API sends the image, not just text.
 
 ### 3.8 Title screen
-No logo over a static scene. Show the empty track with a ghost car doing one slow lap, laying rubber, with a thumb-shaped hint dragging left and right in time with the steering. Two seconds of that teaches the control better than text. Below it: "Tap to drive" and the best score. Nothing else. The logo carries a one-line tagline, and the foot sits over a bottom scrim so it reads wherever the ghost car is.
+No logo over a static scene. Show the empty course with a ghost car laying rubber: a slow lap of the circuit, or a figure of eight on the lot. Over it, thumb-shaped hints for the chosen scheme: a hold cue on each side for one thumb, or the pedals and stick for two. Two seconds of that teaches the control better than text. Below it: a controls toggle, "Tap to drive", a one-line description of the controls, the best score for the mode, and in a browser on a phone an Add to Home Screen suggestion. Sound and mode chips sit at the top. The logo carries a one-line tagline that names the scheme, and the foot sits over a bottom scrim so it reads wherever the ghost car is.
 
 ### 3.9 Audio
-One engine loop pitched by speed, a tyre squeal loop gained by drift angle, and three short SFX (chain bank, multiplier up, countdown). Web Audio API, unlocked on first touch. Muted by default until the player taps the sound toggle or starts a run (iOS autoplay rules).
+One engine loop pitched by speed, a tyre squeal loop gained by drift angle, and five short SFX: countdown tick, go, multiplier up, chain bank, and running wide. Web Audio API, created and unlocked on the first touch (iOS autoplay rules). Sound is on by default; the toggle on the title and pause screens mutes it and the choice is remembered. The mappings from telemetry to pitch and gain are pure functions with their own tests.
 
 ### 3.10 Tone and device checks
 - **Tone (decided):** cold and precise, time-attack. Restrained palette, single hot accent, hard snaps over soft fades, no toy-like chunkiness. Every later visual choice is tested against this.
@@ -163,33 +163,51 @@ One engine loop pitched by speed, a tyre squeal loop gained by drift angle, and 
 | Framework | None (vanilla) | A game loop and a few screens do not need React; keeps bundle under 50 KB |
 | Lint / format | ESLint + Prettier | Required by commit hygiene rules |
 | Tests | Vitest | Unit tests for physics, scoring, track distance maths |
-| PWA | vite-plugin-pwa | Offline play, add-to-home-screen |
+| PWA | Web manifest and icons now; service worker still to do | Add-to-home-screen works today; offline play is the remaining milestone 6 item, vite-plugin-pwa is the candidate |
 | Hosting | GitHub Pages (static) | Zero cost, fits a static bundle |
 
 ### 4.2 Architecture
 ```
 src/
-  main.ts            bootstrap, resize handling, starts the loop
-  config.ts          all tunables in one place
+  main.ts            bootstrap, run state, update and render, screen transitions
+  config.ts          all tunables in one place, palette included
+  style.css          HUD and screen styles, safe-area variables
+  assets/fonts/      Archivo Expanded, bundled
   core/
     loop.ts          fixed-timestep update (60 Hz) + variable render, rAF driven
-    input.ts         touch/pointer/keyboard -> { throttle: 0..1, steer: -1..1 }
-    state.ts         finite state machine: title | countdown | playing | paused | gameover
+    input.ts         touch/pointer/keyboard for both schemes -> { throttle, steer, handbrake }
+    canvas.ts        canvas sized to the window at a capped device pixel ratio
+    angle.ts         shortest signed angle between headings
+    haptics.ts       vibration API wrapper, decoration only
+    state.ts         title | countdown | playing | paused | gameover
     mode.ts          which course a run is on: track | free
   game/
-    car.ts           physics step, drift detection
-    track.ts         track definition, distance-to-centreline, lap detection
+    car.ts           physics step, drift detection, road assist, corner lift
+    track.ts         circuit definition, spline centreline, distance queries, bounds
     lot.ts           open lot geometry and its figure-eight title ghost
-    scoring.ts       chain, multiplier, timer
-    particles.ts     smoke, skid marks
+    laps.ts          lap counting via ordered checkpoints
+    scoring.ts       chain, multiplier, timer, score events
+    particles.ts     smoke pool, screen shake
+    autopilot.ts     cautious driver for the title ghost and the drivability test
+    thumb.ts         naive thumb that drives the real input path in tests
   render/
-    camera.ts        follow, lead, zoom
-    draw.ts          track, car, particles, skids
-    hud.ts           DOM overlay for text (crisper than canvas text, trivially styled)
+    camera.ts        follow, lead, zoom, game-over overview
+    draw.ts          grass, track, lot, car, smoke, chain text, popups, debug readout
+    skids.ts         persistent offscreen rubber canvas sized from course bounds
+    hud.ts           DOM overlay for text, buttons, controls and cues
   audio/
-    audio.ts         Web Audio graph, engine/squeal loops, SFX
-  storage.ts         localStorage best score, settings
+    audio.ts         Web Audio graph, engine/squeal loops, SFX, mute
+    mapping.ts       pure telemetry-to-audio mappings, unit tested
+    session.ts       iOS playback session so the ringer switch does not mute the game
+  debug/
+    panel.ts         ?debug tuning panel of sliders over the live config
+    state.ts         debug-only switches (autopilot, aggression)
+  storage.ts         localStorage best scores per mode, remembered mode and scheme
+public/
+  manifest.webmanifest, icons/
 ```
+
+Unit tests sit beside the modules they cover as `*.test.ts`.
 
 Key decisions:
 - **Fixed timestep physics** (16.67 ms, with accumulator) so the car behaves identically on 60 Hz and 120 Hz screens.
@@ -218,19 +236,21 @@ Key decisions:
 
 ## 5. Milestones
 
-Each milestone ends in something playable. Commits are small and follow `type(scope): summary`.
+Each milestone ends in something playable. Commits are small and follow `type(scope): summary`. Milestones 0 to 5 are done; 6 is in progress.
 
-| # | Milestone | Scope | Done when |
-|---|---|---|---|
-| 0 | **Scaffold** | Vite + TS + ESLint + Prettier + Vitest, canvas fills screen, blank loop running | `npm run dev` shows a coloured canvas at 60 fps on a phone |
-| 1 | **Car moves** | Input module, car physics, camera follow, debug rectangle for the car | Car can be driven around an empty field with one thumb and it drifts |
-| 2 | **Track** | Track data, rendering, off-track detection, lap detection | Can drive laps, going off-track feels bad |
-| 3 | **Scoring loop** | Drift detection, chain, multiplier, timer, HUD, title and game-over screens, best score | A complete 60-second run with a score can be played and restarted |
-| 4 | **Juice** | Skid marks, smoke, screen shake, haptics, car silhouette, palette and type pass, multiplier ring, game-over zoom-out, outdoor device check | Game looks and feels like a game, not a prototype |
-| 5 | **Audio** | Engine, squeal, SFX, mute toggle, iOS unlock | Sound works on iPhone and Android with headphones |
-| 6 | **Ship** | PWA manifest and service worker, GitHub Pages deploy workflow, README, device test pass | Installable from a public URL, plays offline |
+| # | Milestone | Scope | Done when | Status |
+|---|---|---|---|---|
+| 0 | **Scaffold** | Vite + TS + ESLint + Prettier + Vitest, canvas fills screen, blank loop running | `npm run dev` shows a coloured canvas at 60 fps on a phone | Done |
+| 1 | **Car moves** | Input module, car physics, camera follow, debug rectangle for the car | Car can be driven around an empty field with one thumb and it drifts | Done |
+| 2 | **Track** | Track data, rendering, off-track detection, lap detection | Can drive laps, going off-track feels bad | Done |
+| 3 | **Scoring loop** | Drift detection, chain, multiplier, timer, HUD, title and game-over screens, best score | A complete 60-second run with a score can be played and restarted | Done |
+| 4 | **Juice** | Skid marks, smoke, screen shake, haptics, car silhouette, palette and type pass, multiplier ring, game-over zoom-out, outdoor device check | Game looks and feels like a game, not a prototype | Done |
+| 5 | **Audio** | Engine, squeal, SFX, mute toggle, iOS unlock | Sound works on iPhone and Android with headphones | Done |
+| 6 | **Ship** | PWA manifest and service worker, GitHub Pages deploy workflow, README, device test pass | Installable from a public URL, plays offline | Manifest, icons, Pages deploy and README done; service worker and device test pass remaining |
 
-Suggested branches: `build/scaffold`, `feat/car-physics`, `feat/track`, `feat/scoring-loop`, `feat/juice`, `feat/audio`, `build/pwa-deploy`.
+Since the plan was written the game has grown a second control scheme (two thumbs: pedals and a directional stick, section 2.2) and a second course (free drift on an open lot, section 2.7), each described in its own section above.
+
+The deploy workflow lints, tests and builds on every push to `main` and publishes `dist/` to GitHub Pages.
 
 ---
 
@@ -239,7 +259,7 @@ Suggested branches: `build/scaffold`, `feat/car-physics`, `feat/track`, `feat/sc
 - **Unit (Vitest):** physics step determinism, drift threshold edge cases, multiplier timing, distance-to-polyline, lap counter does not double-count.
 - **Drivability (Vitest):** the autopilot and naive thumb runs in section 2.3. Tune against the thumb's off-track time, not against how a change feels to the person who made it.
 - **Manual device matrix:** iPhone (Safari), mid-range Android (Chrome), one tablet. Check input, audio unlock, safe areas, frame rate via a debug FPS toggle.
-- **Tuning sessions:** a hidden debug panel (query string `?debug`) exposes the physics tunables as sliders so feel can be adjusted on a real phone without rebuilding.
+- **Tuning sessions:** a hidden debug panel (query string `?debug`) exposes the physics, camera and steering tunables as sliders so feel can be adjusted on a real phone without rebuilding, with an autopilot toggle and aggression slider to watch balance without thumbs. The same flag draws a readout of speed, slip, laps, FPS, input, and the audio and haptics paths in use.
 
 ---
 
@@ -248,8 +268,8 @@ Suggested branches: `build/scaffold`, `feat/car-physics`, `feat/track`, `feat/sc
 | Risk | Mitigation |
 |---|---|
 | Car feel is wrong and the whole game falls flat | Milestone 1 is entirely about feel; do not proceed until it is fun to just slide around |
-| Drag-to-steer is unintuitive for some players | Title screen shows a 2-second animated hint; keep a left/right split-screen tap mode behind a setting as a fallback |
-| iOS audio quirks | Audio is a separate late milestone; game is fully playable muted |
+| Steering scheme is unintuitive for some players | Resolved: drag-to-steer was built and rejected (section 2.2). Two schemes ship, hold-a-side and pedals plus stick, both on the title screen with an animated hint for whichever is chosen |
+| iOS audio quirks | Audio is a separate milestone and the game is fully playable muted. Shipped: unlock on first touch, and a playback session so the ringer switch does not mute it (section 4.4) |
 | Frame drops on low-end phones | DPR cap, particle pool limits, skid marks on offscreen canvas, fixed timestep so physics stays correct even when rendering drops frames |
 | Scope creep (garage, more tracks, multiplayer) | Non-goals listed above; anything new goes in a `docs/BACKLOG.md`, not the current milestone |
 
