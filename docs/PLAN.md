@@ -49,7 +49,7 @@ Simple velocity-based model, tuned by feel:
 - **Drift state** = lateral speed above a threshold AND forward speed above a minimum. Entering drift slightly boosts angular response so holding the slide feels intentional.
 - **Long holds slow the car.** In the second steering stage throttle is cut by up to half, so a committed slide tightens and sheds speed. This is what makes every corner makeable without the handbrake.
 - **Road assist.** With no side held and the car on asphalt, yaw eases toward the road tangent (gain-limited). Half strength while drifting, zero on grass. It is the thing that makes releasing the thumb safe.
-- **Tuned against drivers, not feelings.** A naive thumb model (150 ms reaction, holds a side when pointed off the line, never brakes) and a cautious autopilot both run in the test suite. Changes that push the naive driver's off-track time up are rejected.
+- **Tuned against drivers, not feelings.** Two drivers run in the test suite. A cautious autopilot with a handbrake must lap the circuit (it feeds the physics directly, so it checks the track, not the controls). A naive thumb (200 to 250 ms reaction, re-decides ten times a second, looks somewhere in the visible road, holds a side when pointed off that spot, never brakes) drives through the real input path: held side, steering ramp, road assist, then the physics. It is run for a portrait and a landscape phone, since landscape shows less than a second of road ahead at top speed. The bar is under 15% of the run off the road and at least two laps. The shipped tuning does not clear it yet, so those cases are marked as expected failures; a change that gets one passing flips it, and the marker comes off.
 
 Tunables live in one config object so tuning is a one-file job: `maxSpeed`, `accel`, `drag`, `gripNormal`, `gripDrift`, `steerRate`, `driftThreshold`.
 
@@ -213,6 +213,7 @@ Suggested branches: `build/scaffold`, `feat/car-physics`, `feat/track`, `feat/sc
 ## 6. Testing
 
 - **Unit (Vitest):** physics step determinism, drift threshold edge cases, multiplier timing, distance-to-polyline, lap counter does not double-count.
+- **Drivability (Vitest):** the autopilot and naive thumb runs in section 2.3. Tune against the thumb's off-track time, not against how a change feels to the person who made it.
 - **Manual device matrix:** iPhone (Safari), mid-range Android (Chrome), one tablet. Check input, audio unlock, safe areas, frame rate via a debug FPS toggle.
 - **Tuning sessions:** a hidden debug panel (query string `?debug`) exposes the physics tunables as sliders so feel can be adjusted on a real phone without rebuilding.
 
