@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildTrack, CIRCUIT, isOffTrack, nearestOnTrack, startPose } from './track';
+import {
+  buildTrack,
+  CIRCUIT,
+  isOffTrack,
+  minRadiusAhead,
+  nearestOnTrack,
+  startPose,
+} from './track';
 
 const track = buildTrack(CIRCUIT);
 
@@ -58,5 +65,43 @@ describe('nearestOnTrack', () => {
     const q = nearestOnTrack(track, p.x - p.ty * d, p.y + p.tx * d);
     expect(q.distance).toBeGreaterThan(track.width / 2);
     expect(isOffTrack(track, q.distance)).toBe(true);
+  });
+});
+
+describe('radius', () => {
+  it('is infinite on the straight and tight at the hairpin', () => {
+    const start = track.points[0];
+    if (!start) throw new Error('missing point');
+    expect(start.radius).toBeGreaterThan(1000);
+    const radii = track.points.map((p) => p.radius);
+    const tightest = Math.min(...radii);
+    expect(tightest).toBeGreaterThan(70);
+    expect(tightest).toBeLessThan(110);
+  });
+});
+
+describe('minRadiusAhead', () => {
+  it('sees the hairpin from the straight before it and not after', () => {
+    const hairpin = track.points.reduce(
+      (best, p, i) => (p.radius < best.r ? { r: p.radius, i } : best),
+      {
+        r: Infinity,
+        i: 0,
+      },
+    );
+    const before = (hairpin.i - 10 + track.points.length) % track.points.length;
+    const after = (hairpin.i + 10) % track.points.length;
+    expect(minRadiusAhead(track, before, 400)).toBe(hairpin.r);
+    expect(minRadiusAhead(track, after, 60)).toBeGreaterThan(hairpin.r);
+  });
+
+  it('includes the current point and wraps around the start line', () => {
+    const last = track.points.length - 1;
+    const lastPoint = track.points[last];
+    if (!lastPoint) throw new Error('missing point');
+    expect(minRadiusAhead(track, last, 0)).toBe(lastPoint.radius);
+    expect(minRadiusAhead(track, last, track.length)).toBe(
+      Math.min(...track.points.map((p) => p.radius)),
+    );
   });
 });

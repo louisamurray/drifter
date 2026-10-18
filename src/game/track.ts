@@ -28,6 +28,8 @@ export interface TrackPoint extends Vec2 {
   ty: number;
   /** Signed curvature proxy: positive turns clockwise in screen space. */
   turn: number;
+  /** Local radius of the centreline in world px. Infinity on a straight. */
+  radius: number;
 }
 
 export interface RumbleRange {
@@ -140,7 +142,9 @@ export function buildTrack(def: TrackDef): Track {
     const outX = next.x - p.x;
     const outY = next.y - p.y;
     const turn = Math.atan2(inX * outY - inY * outX, inX * outX + inY * outY);
-    points.push({ x: p.x, y: p.y, s, tx, ty, turn });
+    const step = (Math.hypot(inX, inY) + Math.hypot(outX, outY)) / 2;
+    const radius = Math.abs(turn) > 1e-6 ? step / Math.abs(turn) : Infinity;
+    points.push({ x: p.x, y: p.y, s, tx, ty, turn, radius });
   }
   const last = at(points, -1);
   const first = at(points, 0);
@@ -191,6 +195,24 @@ export function nearestOnTrack(track: Track, x: number, y: number): TrackQuery {
     }
   }
   return { distance: Math.sqrt(bestD2), s: bestS % track.length, index: bestIndex };
+}
+
+/**
+ * Tightest centreline radius within `distance` world px ahead of the point at
+ * `index`, including that point. Infinity if it is all straight.
+ */
+export function minRadiusAhead(track: Track, index: number, distance: number): number {
+  const pts = track.points;
+  const n = pts.length;
+  const from = at(pts, index);
+  let min = from.radius;
+  for (let k = 1; k < n; k++) {
+    const p = at(pts, index + k);
+    const along = (p.s - from.s + track.length) % track.length;
+    if (along > distance) break;
+    if (p.radius < min) min = p.radius;
+  }
+  return min;
 }
 
 export function isOffTrack(track: Track, distance: number): boolean {
