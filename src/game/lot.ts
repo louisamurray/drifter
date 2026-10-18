@@ -15,6 +15,9 @@ export interface Lot {
   corner: number;
   /** Radius of the painted ring in the middle: a skidpad circle to slide around. */
   ring: number;
+  /** Painted parking bays along the long edges: how deep they reach in and how far apart they are. */
+  bayDepth: number;
+  bayPitch: number;
 }
 
 export function lotBounds(lot: Lot): Bounds {

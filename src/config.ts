@@ -99,13 +99,16 @@ export const config = {
     scale: 1,
   },
   lot: {
-    /** Asphalt size of the free drift lot in world px, centred on the origin. */
-    width: 1000,
-    height: 1400,
+    /** Asphalt size of the free drift lot in world px, centred on the origin. About five screens tall. */
+    width: 1800,
+    height: 2600,
     /** Corner radius of the asphalt. */
-    corner: 220,
+    corner: 300,
     /** Radius of the painted skidpad ring in the middle. */
-    ring: 230,
+    ring: 260,
+    /** Painted parking bays along the long edges: depth into the lot and spacing, in world px. */
+    bayDepth: 90,
+    bayPitch: 50,
   },
   offTrack: {
     /** Multipliers applied to physics while off the road. */
@@ -136,6 +139,8 @@ export const config = {
   juice: {
     /** Skid canvas resolution in pixels per world unit. */
     skidScale: 1.25,
+    /** Cap on the skid canvas area, so a large course lowers its resolution instead of its frame rate. */
+    skidMaxPixels: 5e6,
     /** Alpha laid down per pass at full drift intensity. Builds up on repeated passes. */
     skidAlpha: 0.28,
     skidWidth: 6,

@@ -3,7 +3,7 @@ import { config } from '../config';
 import { createCar, ROAD, stepCar } from './car';
 import { createLotPilot, insideLot, lotBounds, lotStartPose, type Lot } from './lot';
 
-const lot: Lot = { width: 1000, height: 1400, corner: 200, ring: 230 };
+const lot: Lot = { width: 1000, height: 1400, corner: 200, ring: 230, bayDepth: 90, bayPitch: 50 };
 
 describe('insideLot', () => {
   it('is true in the middle and false past the sides', () => {
@@ -32,7 +32,8 @@ describe('insideLot', () => {
  * the middle.
  */
 describe('createLotPilot', () => {
-  it('drifts a figure of eight and stays on the asphalt', () => {
+  it('drifts a figure of eight and stays on the asphalt of the shipped lot', () => {
+    const lot = config.lot;
     const start = lotStartPose();
     const car = createCar(start.x, start.y, start.heading);
     const pilot = createLotPilot(lot);

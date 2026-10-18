@@ -192,6 +192,25 @@ export function drawLot(ctx: CanvasRenderingContext2D, lot: Lot): void {
   ctx.globalAlpha = 0.35;
   ctx.stroke();
   ctx.setLineDash([]);
+
+  // Parking bays along the long edges: faint, so they give the slab scale and
+  // motion without pulling the eye off the car. The middle stays open.
+  const hx = lot.width / 2;
+  const hy = lot.height / 2 - lot.corner;
+  ctx.globalAlpha = 0.22;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let y = -hy; y <= hy; y += lot.bayPitch) {
+    ctx.moveTo(-hx + 14, y);
+    ctx.lineTo(-hx + 14 + lot.bayDepth, y);
+    ctx.moveTo(hx - 14, y);
+    ctx.lineTo(hx - 14 - lot.bayDepth, y);
+  }
+  ctx.moveTo(-hx + 14 + lot.bayDepth, -hy);
+  ctx.lineTo(-hx + 14 + lot.bayDepth, hy);
+  ctx.moveTo(hx - 14 - lot.bayDepth, -hy);
+  ctx.lineTo(hx - 14 - lot.bayDepth, hy);
+  ctx.stroke();
   ctx.globalAlpha = 1;
 }
 

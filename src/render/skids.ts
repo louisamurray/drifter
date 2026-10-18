@@ -15,13 +15,17 @@ export class SkidLayer {
   readonly worldHeight: number;
   private readonly scale: number;
 
-  /** Covers `bounds` plus `pad` world px on every side. */
+  /**
+   * Covers `bounds` plus `pad` world px on every side, at the configured
+   * resolution unless that would exceed the pixel cap.
+   */
   constructor(bounds: Bounds, pad: number) {
     this.originX = bounds.minX - pad;
     this.originY = bounds.minY - pad;
     this.worldWidth = bounds.maxX - bounds.minX + pad * 2;
     this.worldHeight = bounds.maxY - bounds.minY + pad * 2;
-    this.scale = config.juice.skidScale;
+    const area = this.worldWidth * this.worldHeight;
+    this.scale = Math.min(config.juice.skidScale, Math.sqrt(config.juice.skidMaxPixels / area));
 
     this.canvas = document.createElement('canvas');
     this.canvas.width = Math.ceil(this.worldWidth * this.scale);
