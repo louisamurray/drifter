@@ -33,7 +33,7 @@ Two schemes, chosen on the title screen and remembered. **Two thumbs** is the de
 |---|---|
 | Gas (bottom-left corner) | Nothing else moves the car: lift to coast, hold to go. The gas eases in over 0.15 s and lets go at once. There is no corner lift in this scheme, speed is the player's to choose, and the tail lights glow whenever the gas is off |
 | Handbrake (beside the gas) | Grip drops, speed scrubs, rear steps out. Works with the gas held |
-| Stick (bottom-right corner) | A fixed base with a knob. How far the thumb sits left or right of the centre is the steer, proportional, with a small deadzone, applied directly rather than through the two-stage ramp. Up and down are ignored. Touch hits anywhere in the bottom-right quarter grab it, so the thumb need not land on the base |
+| Stick (bottom-right corner) | A fixed base with a knob. The stick is directional only: its angle from the centre is the heading the player wants, in screen space (the camera never rotates, so up is up), and the car steers towards it, proportionally to the error and at full lock from about 35° off. Pointing it behind the car turns the car round. How far the thumb is from the centre does not matter beyond a small deadzone, and it never touches the throttle. The steer is applied directly rather than through the two-stage ramp. Touch hits anywhere in the bottom-right quarter grab it, so the thumb need not land on the base |
 
 The drag-to-steer objection below does not apply here: the stick's centre is drawn on screen, and throttle lives on the other thumb.
 
