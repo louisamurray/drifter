@@ -1,13 +1,22 @@
 :root {
   --asphalt: #1c2230;
+  --asphalt-deep: #12171f;
   --cream: #e8dcc4;
   --accent: #ff5a2d;
   --text: #f2eee6;
+  --text-dim: rgba(242, 238, 230, 0.72);
+  --line: rgba(242, 238, 230, 0.32);
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
   --sar: env(safe-area-inset-right, 0px);
   --font: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --snap: cubic-bezier(0.2, 1.4, 0.4, 1);
+  /* Stacking: world canvas, then the HUD overlay, then the debug panel. */
+  --z-hud: 1;
+  --z-debug: 10;
+  color-scheme: dark;
 }
 
 @font-face {
@@ -32,7 +41,9 @@ body {
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   font-family: var(--font);
+  font-weight: 800;
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
 }
 
 #game {
@@ -47,6 +58,7 @@ body {
 .hud {
   position: fixed;
   inset: 0;
+  z-index: var(--z-hud);
   pointer-events: none;
   font-variant-numeric: tabular-nums;
 }
@@ -63,133 +75,211 @@ body {
   display: block;
 }
 
-/* Title */
+/* Shared: a small chip-style toggle (sound) */
+.chip {
+  pointer-events: auto;
+  appearance: none;
+  border: 1.5px solid var(--line);
+  background: rgba(28, 34, 48, 0.55);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding: 0 12px;
+  height: 32px;
+  border-radius: 16px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s var(--ease-out);
+}
+.chip:active {
+  transform: scale(0.96);
+}
+.chip.off,
+.btn-quiet.off {
+  opacity: 0.6;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+/* ---------------------------------------------------------------- Title */
 .screen-title {
   pointer-events: auto;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 18px;
   cursor: pointer;
-  padding-bottom: calc(var(--sab) + 72px);
+}
+.screen-title.active {
+  display: block;
 }
 .sound-toggle {
   position: absolute;
   top: calc(var(--sat) + 12px);
   right: calc(var(--sar) + 12px);
-  appearance: none;
-  border: 2px solid rgba(242, 238, 230, 0.4);
-  background: rgba(28, 34, 48, 0.5);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 8px 12px;
-  border-radius: 14px;
-  cursor: pointer;
-  touch-action: manipulation;
 }
-.sound-toggle.off,
-.btn-quiet.off {
-  opacity: 0.55;
-  text-decoration: line-through;
-}
-.btn-quiet {
-  border-color: rgba(242, 238, 230, 0.4);
-  background: transparent;
-  font-size: 15px;
-}
-.screen-title.active {
-  display: flex;
-}
-.title-logo {
+.title-lockup {
   position: absolute;
-  top: calc(var(--sat) + 14vh);
+  top: calc(var(--sat) + 12vh);
   left: 0;
   right: 0;
-  text-align: center;
-  font-size: clamp(32px, 10.5vw, 60px);
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   padding: 0 16px;
-  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.title-logo {
+  font-size: clamp(40px, 12vw, 72px);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.35),
+    0 6px 28px rgba(0, 0, 0, 0.45);
+}
+.title-tag {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5);
+}
+/* The ghost lap runs under the title; a scrim keeps the foot legible wherever the road is. */
+.title-scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48vh;
+  background: linear-gradient(to top, rgba(18, 23, 31, 0.82) 0%, rgba(18, 23, 31, 0) 100%);
+  pointer-events: none;
+}
+.title-foot {
+  position: absolute;
+  left: calc(var(--sal) + 16px);
+  right: calc(var(--sar) + 16px);
+  bottom: calc(var(--sab) + 28px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.hint {
+  position: relative;
+  width: min(280px, 100%);
+  height: 60px;
+  margin-bottom: 6px;
+}
+.hint-thumb {
+  position: absolute;
+  top: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid var(--cream);
+  background: rgba(28, 34, 48, 0.75);
+  color: var(--cream);
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.hint-left {
+  left: 0;
+  animation: hold 2.4s var(--ease-out) infinite;
+}
+.hint-right {
+  right: 0;
+  animation: hold 2.4s var(--ease-out) infinite 1.2s;
 }
 .title-cta {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  min-width: min(280px, 100%);
+  padding: 0 28px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  background: var(--cream);
+  color: var(--asphalt);
+  font-size: 19px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  animation: breathe 1.6s ease-in-out infinite;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s var(--ease-out);
+}
+.screen-title:active .title-cta {
+  transform: scale(0.97);
+}
+.title-sub {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  max-width: 34ch;
+  text-wrap: balance;
 }
 .title-best {
-  font-size: 15px;
-  opacity: 0.75;
+  font-size: 14px;
+  letter-spacing: 0.04em;
   min-height: 1.2em;
+}
+.title-best:empty {
+  display: none;
 }
 .title-install {
   display: none;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  opacity: 0.6;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  opacity: 0.8;
 }
 .title-install.show {
   display: block;
 }
-.hint {
-  position: relative;
-  width: 220px;
-  height: 64px;
-}
-.hint-thumb {
-  position: absolute;
-  top: 8px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 3px solid var(--cream);
-  box-sizing: border-box;
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.hint-left {
-  left: 16px;
-  animation: hold 2.4s ease-in-out infinite;
-}
-.hint-right {
-  right: 16px;
-  animation: hold 2.4s ease-in-out infinite 1.2s;
-}
-.title-sub {
-  font-size: 13px;
-  opacity: 0.75;
-  margin-top: -8px;
-}
 
-/* Countdown */
+/* ------------------------------------------------------------ Countdown */
 .screen-countdown.active {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .countdown-number {
-  font-size: clamp(96px, 32vw, 160px);
-  font-weight: 800;
+  font-size: clamp(110px, 36vw, 180px);
+  line-height: 1;
   color: var(--accent);
-  text-shadow: 0 4px 32px rgba(0, 0, 0, 0.6);
-  margin-top: -20vh;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.35),
+    0 8px 40px rgba(0, 0, 0, 0.6);
+  margin-top: -24vh;
 }
 .countdown-number.pop {
-  animation: pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+  animation: pop 0.45s var(--snap);
 }
 
-/* Playing */
+/* -------------------------------------------------------------- Playing */
+/* Off-road vignette: a static layer the compositor fades, so the canvas never pays for it. */
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 75% 62% at 50% 60%,
+    rgba(20, 24, 16, 0) 40%,
+    rgba(20, 24, 16, 0.6) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+  will-change: opacity;
+}
+.vignette.show {
+  opacity: 1;
+}
 .zones {
   position: absolute;
   inset: 0;
@@ -208,12 +298,14 @@ body {
   /* Mid-screen, so a new player never learns to rest a thumb on the browser's
      bottom toolbar. The car sits below at 60%. */
   padding-bottom: 20vh;
-  font-size: 13px;
-  letter-spacing: 0.14em;
+  font-size: 12px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--cream);
   opacity: 0.55;
-  transition: background 0.15s ease;
+  transition:
+    background 0.15s ease,
+    opacity 0.15s ease;
 }
 .zone-left::after {
   content: '◀ hold';
@@ -223,33 +315,36 @@ body {
 }
 .zone.held {
   background: rgba(232, 220, 196, 0.08);
+  opacity: 0.9;
 }
-.hud-pause {
+
+/* Time bar: drains across the top edge so time left reads in peripheral vision. */
+.hud-timebar {
   position: absolute;
-  top: calc(var(--sat) + 58px);
-  left: 50%;
-  transform: translateX(-50%);
-  pointer-events: auto;
-  appearance: none;
-  border: 2px solid rgba(242, 238, 230, 0.4);
-  background: rgba(28, 34, 48, 0.5);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  width: 40px;
-  height: 28px;
-  border-radius: 14px;
-  padding: 0;
-  cursor: pointer;
-  touch-action: manipulation;
+  top: var(--sat);
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(242, 238, 230, 0.14);
 }
+.hud-timebar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--cream);
+  transform-origin: left center;
+  transform: scaleX(var(--time, 1));
+  transition: transform 0.1s linear;
+}
+.hud-timebar.urgent::after {
+  background: var(--accent);
+}
+
 .hud-score,
 .hud-timer,
 .hud-mult {
   position: absolute;
-  top: calc(var(--sat) + 14px);
+  top: calc(var(--sat) + 16px);
 }
 .hud-score {
   left: calc(var(--sal) + 16px);
@@ -258,31 +353,62 @@ body {
   line-height: 1;
 }
 .hud-score .label {
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: 10px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  opacity: 0.7;
-  margin-bottom: 4px;
+  color: var(--text-dim);
+  margin-bottom: 5px;
 }
 .hud-score .value {
   font-size: 28px;
-  font-weight: 800;
 }
 .hud-timer {
   left: 50%;
   transform: translateX(-50%);
-  font-size: 32px;
-  font-weight: 800;
+  font-size: 34px;
   line-height: 1;
 }
 .hud-timer.urgent {
   color: var(--accent);
 }
+.hud-timer.tick {
+  animation: tick 0.3s var(--snap);
+}
+.hud-pause {
+  position: absolute;
+  top: calc(var(--sat) + 58px);
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  appearance: none;
+  border: 1.5px solid var(--line);
+  background: rgba(28, 34, 48, 0.55);
+  color: var(--text);
+  width: 48px;
+  height: 30px;
+  border-radius: 15px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+/* Invisible 44px hit area around the small pill. */
+.hud-pause::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+.hud-pause svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
 .hud-mult {
   right: calc(var(--sar) + 12px);
-  top: calc(var(--sat) + 8px);
-  width: 56px;
-  height: 56px;
+  top: calc(var(--sat) + 10px);
+  width: 58px;
+  height: 58px;
   display: grid;
   place-items: center;
 }
@@ -294,7 +420,7 @@ body {
 .ring-track,
 .ring-fill {
   fill: none;
-  stroke-width: 4;
+  stroke-width: 4.5;
 }
 .ring-track {
   stroke: rgba(242, 238, 230, 0.18);
@@ -309,14 +435,13 @@ body {
 }
 .mult-value {
   font-size: 17px;
-  font-weight: 800;
   z-index: 1;
 }
 .hud-mult.hot .mult-value {
   color: var(--accent);
 }
 .hud-mult.punch {
-  animation: punch 0.28s cubic-bezier(0.2, 1.6, 0.4, 1);
+  animation: punch 0.28s var(--snap);
 }
 .hud-mult::after {
   content: '';
@@ -331,69 +456,77 @@ body {
   animation: flash 0.32s ease-out;
 }
 
-/* Paused */
+/* --------------------------------------------------------------- Paused */
 .screen-paused.active {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(28, 34, 48, 0.6);
+  background: rgba(18, 23, 31, 0.72);
   pointer-events: auto;
 }
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-width: 220px;
+  gap: 10px;
+  width: min(300px, 100%);
 }
 .panel-title {
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 30px;
+  line-height: 1;
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 14px;
+}
+.panel .btn-quiet {
+  margin-top: 6px;
 }
 
-/* Game over */
+/* ------------------------------------------------------------ Game over */
 .screen-over.active {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  align-items: center;
   pointer-events: auto;
 }
 .over-top {
   text-align: center;
-  padding-top: 4vh;
+  padding-top: 2vh;
+  line-height: 1;
 }
 .over-newbest {
-  font-size: 13px;
-  letter-spacing: 0.16em;
+  font-size: 12px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--accent);
   visibility: hidden;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 .over-newbest.show {
   visibility: visible;
-  animation: breathe 1s ease-in-out infinite;
+  animation: breathe 1.2s ease-in-out infinite;
 }
 .over-score {
-  font-size: clamp(48px, 16vw, 80px);
-  font-weight: 800;
-  line-height: 1;
-  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.5);
+  font-size: clamp(56px, 18vw, 88px);
+  letter-spacing: -0.01em;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.35),
+    0 6px 28px rgba(0, 0, 0, 0.45);
 }
 .over-best {
-  font-size: 15px;
-  opacity: 0.75;
-  margin-top: 8px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  margin-top: 12px;
 }
 .over-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  width: min(360px, 100%);
   padding-bottom: 8px;
 }
 
-/* Buttons */
+/* -------------------------------------------------------------- Buttons */
 .btn {
   pointer-events: auto;
   appearance: none;
@@ -401,13 +534,15 @@ body {
   background: rgba(28, 34, 48, 0.85);
   color: var(--text);
   font: inherit;
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  padding: 14px 20px;
-  border-radius: 12px;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  min-height: 56px;
+  padding: 0 20px;
+  border-radius: 16px;
   cursor: pointer;
   touch-action: manipulation;
+  transition: transform 0.15s var(--ease-out);
 }
 .btn:active {
   transform: scale(0.97);
@@ -417,8 +552,21 @@ body {
   color: var(--asphalt);
 }
 .btn-large {
-  font-size: 22px;
-  padding: 20px;
+  font-size: 21px;
+  min-height: 64px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.btn-quiet {
+  border-color: var(--line);
+  background: transparent;
+  font-size: 14px;
+  min-height: 48px;
+}
+.btn:focus-visible,
+.chip:focus-visible,
+.hud-pause:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
 }
 
 @keyframes breathe {
@@ -434,12 +582,14 @@ body {
   0%,
   45%,
   100% {
-    background: transparent;
+    background: rgba(28, 34, 48, 0.75);
+    color: var(--cream);
     transform: scale(1);
   }
   10%,
   35% {
-    background: rgba(232, 220, 196, 0.35);
+    background: var(--cream);
+    color: var(--asphalt);
     transform: scale(0.92);
   }
 }
@@ -469,12 +619,37 @@ body {
     transform: scale(1);
   }
 }
+@keyframes tick {
+  0% {
+    transform: translateX(-50%) scale(1.14);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .title-cta,
   .hint-left,
   .hint-right,
-  .over-newbest.show {
+  .over-newbest.show,
+  .countdown-number.pop,
+  .hud-mult.punch,
+  .hud-mult.punch::after,
+  .hud-timer.tick {
     animation: none;
+  }
+  .hint-right {
+    background: var(--cream);
+    color: var(--asphalt);
+  }
+  .hud-timebar::after,
+  .vignette,
+  .ring-fill,
+  .zones,
+  .zone,
+  .btn,
+  .chip,
+  .title-cta {
+    transition: none;
   }
 }

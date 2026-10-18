@@ -11,10 +11,13 @@ export class Hud {
   // Playing
   private readonly scoreEl: HTMLElement;
   private readonly timerEl: HTMLElement;
+  private readonly timebarEl: HTMLElement;
+  private lastWholeSecond = -1;
   private readonly multEl: HTMLElement;
   private readonly ringEl: SVGCircleElement;
   private readonly ringLength: number;
   private readonly zonesEl: HTMLElement;
+  private readonly vignetteEl: HTMLElement;
   private readonly zoneLeft: HTMLElement;
   private readonly zoneRight: HTMLElement;
 
@@ -44,16 +47,22 @@ export class Hud {
     // Title
     const title = el('div', 'screen screen-title');
     title.innerHTML = `
-      <button class="sound-toggle" data-act="sound" aria-label="Sound">sound on</button>
-      <div class="title-logo">DRIFTER</div>
-      <div class="hint">
-        <div class="hint-thumb hint-left"><span>hold</span></div>
-        <div class="hint-thumb hint-right"><span>hold</span></div>
+      <button class="chip sound-toggle" data-act="sound" aria-label="Sound">sound on</button>
+      <div class="title-lockup">
+        <div class="title-logo">DRIFTER</div>
+        <div class="title-tag">One thumb. Sixty seconds.</div>
       </div>
-      <div class="title-cta">Tap to drive</div>
-      <div class="title-sub">Hold a side, mid-screen, to steer. Both for handbrake.</div>
-      <div class="title-best"></div>
-      <div class="title-install">Add to Home Screen to play full screen</div>`;
+      <div class="title-scrim"></div>
+      <div class="title-foot">
+        <div class="hint">
+          <div class="hint-thumb hint-left"><span>hold</span></div>
+          <div class="hint-thumb hint-right"><span>hold</span></div>
+        </div>
+        <div class="title-cta">Tap to drive</div>
+        <div class="title-sub">Hold a side to steer, both for handbrake</div>
+        <div class="title-best"></div>
+        <div class="title-install">Add to Home Screen to play full screen</div>
+      </div>`;
     title.addEventListener('click', (e) => {
       if (this.dispatch(e)) return;
       this.onStart?.();
@@ -72,10 +81,14 @@ export class Hud {
     // Playing
     const playing = el('div', 'screen screen-playing');
     playing.innerHTML = `
+      <div class="vignette"></div>
       <div class="zones"><div class="zone zone-left"></div><div class="zone zone-right"></div></div>
+      <div class="hud-timebar"></div>
       <div class="hud-score"><span class="label">score</span><span class="value">0</span></div>
       <div class="hud-timer">60.0</div>
-      <button class="hud-pause" data-act="pause" aria-label="Pause">II</button>
+      <button class="hud-pause" data-act="pause" aria-label="Pause">
+        <svg viewBox="0 0 12 12" aria-hidden="true"><rect x="1.5" y="1" width="3.5" height="10" rx="1" fill="currentColor"/><rect x="7" y="1" width="3.5" height="10" rx="1" fill="currentColor"/></svg>
+      </button>
       <div class="hud-mult">
         <svg viewBox="0 0 44 44" class="ring">
           <circle class="ring-track" cx="22" cy="22" r="19"></circle>
@@ -85,11 +98,13 @@ export class Hud {
       </div>`;
     this.scoreEl = must(playing.querySelector('.hud-score .value'));
     this.timerEl = must(playing.querySelector('.hud-timer'));
+    this.timebarEl = must(playing.querySelector('.hud-timebar'));
     this.multEl = must(playing.querySelector('.mult-value'));
     this.ringEl = must(playing.querySelector('.ring-fill'));
     this.ringLength = 2 * Math.PI * 19;
     this.ringEl.style.strokeDasharray = String(this.ringLength);
     this.zonesEl = must(playing.querySelector('.zones'));
+    this.vignetteEl = must(playing.querySelector('.vignette'));
     this.zoneLeft = must(playing.querySelector('.zone-left'));
     this.zoneRight = must(playing.querySelector('.zone-right'));
     playing.addEventListener('click', (e) => {
@@ -104,7 +119,7 @@ export class Hud {
         <div class="panel-title">Paused</div>
         <button class="btn btn-primary" data-act="resume">Resume</button>
         <button class="btn" data-act="restart">Restart</button>
-        <button class="btn btn-quiet" data-act="sound">sound on</button>
+        <button class="btn btn-quiet" data-act="sound">Sound on</button>
       </div>`;
     paused.addEventListener('click', (e) => {
       this.dispatch(e);
@@ -118,7 +133,7 @@ export class Hud {
       <div class="over-top">
         <div class="over-newbest">New best</div>
         <div class="over-score">0</div>
-        <div class="over-best">best 0</div>
+        <div class="over-best">Best 0</div>
       </div>
       <div class="over-actions">
         <button class="btn btn-primary btn-large" data-act="restart">Drive again</button>
@@ -155,7 +170,7 @@ export class Hud {
 
   setSound(on: boolean): void {
     for (const b of this.soundButtons) {
-      b.textContent = on ? 'sound on' : 'sound off';
+      b.textContent = on ? 'Sound on' : 'Sound off';
       b.classList.toggle('off', !on);
     }
   }
@@ -167,7 +182,7 @@ export class Hud {
   }
 
   setTitleBest(best: number): void {
-    this.titleBestEl.textContent = best > 0 ? `best ${fmtScore(best)}` : '';
+    this.titleBestEl.textContent = best > 0 ? `Best ${fmtScore(best)}` : '';
   }
 
   /** Shown in a browser on a touch device, where its toolbar sits under the thumb. */
@@ -184,10 +199,25 @@ export class Hud {
     }
   }
 
-  setPlaying(score: number, timeLeft: number, multiplier: number, progress: number): void {
+  setPlaying(
+    score: number,
+    timeLeft: number,
+    timeTotal: number,
+    multiplier: number,
+    progress: number,
+  ): void {
     this.scoreEl.textContent = fmtScore(score);
     this.timerEl.textContent = timeLeft.toFixed(1);
-    this.timerEl.classList.toggle('urgent', timeLeft <= 10);
+    const urgent = timeLeft <= 10;
+    this.timerEl.classList.toggle('urgent', urgent);
+    this.timebarEl.classList.toggle('urgent', urgent);
+    this.timebarEl.style.setProperty('--time', (timeLeft / timeTotal).toFixed(4));
+    // In the last ten seconds each whole second lands with a snap, not just a digit change
+    const whole = Math.ceil(timeLeft);
+    if (whole !== this.lastWholeSecond) {
+      this.lastWholeSecond = whole;
+      if (urgent && timeLeft > 0) restartAnimation(this.timerEl, 'tick');
+    }
     const label = `×${multiplier % 1 === 0 ? String(multiplier) : multiplier.toFixed(1)}`;
     if (this.multEl.textContent !== label) {
       this.multEl.textContent = label;
@@ -195,6 +225,11 @@ export class Hud {
     }
     this.multEl.parentElement?.classList.toggle('hot', multiplier > 1);
     this.ringEl.style.strokeDashoffset = String(this.ringLength * (1 - progress));
+  }
+
+  /** Darkens the screen edges while the car is on the grass. */
+  setOffRoad(off: boolean): void {
+    this.vignetteEl.classList.toggle('show', off);
   }
 
   /** Faint left/right cues for new players, up to their first lap; `show` fades them in and out. */
@@ -213,7 +248,7 @@ export class Hud {
 
   setGameOver(score: number, best: number, isNewBest: boolean): void {
     this.finalScoreEl.textContent = fmtScore(score);
-    this.finalBestEl.textContent = `best ${fmtScore(best)}`;
+    this.finalBestEl.textContent = `Best ${fmtScore(best)}`;
     this.newBestEl.classList.toggle('show', isNewBest);
   }
 

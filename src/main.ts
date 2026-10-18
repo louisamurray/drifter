@@ -108,6 +108,7 @@ function resetRun(): void {
   newBest = false;
   everDrifted = false;
   hud.setZones(false, false, false);
+  hud.setOffRoad(false);
   skids.clear();
   smoke.clear();
   input.reset();
@@ -331,6 +332,7 @@ function update(dt: number): void {
         : input.sample(dt, config.input.steer);
       stepPhysics(dt, ctl);
       hud.setZones(best === 0 && laps.laps === 0, input.held.left, input.held.right);
+      hud.setOffRoad(offTrack);
       break;
     }
     case 'paused': {
@@ -384,7 +386,13 @@ function render(alpha: number): void {
     const sx = width / 2 + (x - camera.x) * camera.zoom;
     const sy = height * config.render.carScreenY + (y - camera.y) * camera.zoom;
     drawChain(ctx, sx, sy - 44, score.chain, score.multiplier);
-    hud.setPlaying(score.score, score.timeLeft, score.multiplier, multiplierProgress(score));
+    hud.setPlaying(
+      score.score,
+      score.timeLeft,
+      config.scoring.runSeconds,
+      score.multiplier,
+      multiplierProgress(score),
+    );
   }
   drawPopups(ctx, popups);
 
