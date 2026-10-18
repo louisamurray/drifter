@@ -40,10 +40,10 @@ final class LotPilot {
     private let a: Double
     private let b: Double
     private var t = 0.0
-    private let speed = 23.0
+    private let speed = 20.0
     private let lead = 14.0
     private let leash = 32.0
-    private let limit = 26.0
+    private let limit = 20.0
 
     init(lot: Lot) {
         a = lot.width * 0.3
@@ -61,7 +61,7 @@ final class LotPilot {
         let err = angleDelta(car.heading, atan2(wy - car.y, wx - car.x))
         let steer = clamp(err / 0.5, -1, 1)
         let handbrake = car.speed > 12 && (abs(err) > 0.7 || car.speed > limit)
-        let throttle: Double = handbrake ? 0 : (car.speed > limit * 0.9 ? 0.3 : 1)
+        let throttle: Double = handbrake ? 0 : (car.speed > limit * 0.8 ? 0.3 : 1)
         return InputState(throttle: throttle, steer: steer, handbrake: handbrake)
     }
 }

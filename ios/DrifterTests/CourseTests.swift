@@ -19,7 +19,7 @@ final class CourseTests: XCTestCase {
     }
 
     func testNearestOnTrackFindsTheCentreline() {
-        let p = track.points[40]
+        let p = track.points[track.points.firstIndex { $0.radius > 200 } ?? 0]
         let q = nearestOnTrack(track, x: p.x, y: p.y)
         XCTAssertEqual(q.distance, 0, accuracy: 1e-6)
         XCTAssertEqual(q.s, p.s, accuracy: 1e-6)
