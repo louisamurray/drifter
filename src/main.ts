@@ -93,6 +93,12 @@ let start = startFor(mode);
 /** One thumb with automatic throttle, or two thumbs with a gas column. Only the player drives manually. */
 let scheme: ControlScheme = loadScheme();
 input.scheme = scheme;
+input.pad = config.input.pad;
+hud.setPadLayout(config.input.pad);
+input.safeRight = safeArea('--sar');
+window.addEventListener('resize', () => {
+  input.safeRight = safeArea('--sar');
+});
 
 function startFor(m: GameMode): { x: number; y: number; heading: number } {
   return m === 'track' ? startPose(track) : lotStartPose();
@@ -427,6 +433,7 @@ function update(dt: number): void {
       // Hold cues stay up for a new player until their first lap, or first banked chain on the lot
       const learning = best === 0 && (mode === 'track' ? laps.laps === 0 : score.score === 0);
       hud.setZones(learning, input.held);
+      hud.setPad(input.held, input.state.steer);
       hud.setOffRoad(offTrack);
       break;
     }
@@ -518,7 +525,7 @@ function render(alpha: number): void {
       fps,
       input.state.steer,
       input.state.throttle,
-      safeAreaTop() + 70,
+      safeArea('--sat') + 70,
       `${mode} ${scheme}  ${audio.describe()}  haptics: ${hapticsDescription()}`,
     );
   }
@@ -530,8 +537,9 @@ function isStandalone(): boolean {
   return matchMedia('(display-mode: standalone)').matches || nav.standalone === true;
 }
 
-function safeAreaTop(): number {
-  const value = getComputedStyle(document.documentElement).getPropertyValue('--sat');
+/** A safe-area inset in CSS px, from the variables the stylesheet sets. */
+function safeArea(name: '--sat' | '--sab' | '--sal' | '--sar'): number {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name);
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }

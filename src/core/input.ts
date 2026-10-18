@@ -6,11 +6,12 @@
  * with whichever side was pressed first so a second thumb adds the handbrake
  * without changing direction. The car accelerates by itself.
  *
- * Two thumbs: four equal columns. The right thumb steers: the inner right
- * column steers left and the outer right column steers right. The left thumb
- * drives: the outer left column is the gas and the inner left column is the
- * handbrake. Nothing moves the car but the gas, so speed is the player's to
- * choose.
+ * Two thumbs: controls in the bottom corners. The left thumb drives on two
+ * pedals, gas in the corner and the handbrake beside it. The right thumb
+ * steers on a stick: how far the thumb sits left or right of the stick's
+ * centre is the steer, so it can be held part way. Nothing moves the car
+ * but the gas, so speed is the player's to choose. Touches above the
+ * control band are ignored in this scheme.
  *
  * Keyboard: arrows or A/D steer, Up or W is the gas (two-thumb scheme only),
  * Space, Down or S is the handbrake, Escape or P pauses.
@@ -21,16 +22,29 @@ export function isControlScheme(v: unknown): v is ControlScheme {
   return v === 'thumb' || v === 'pedals';
 }
 
-/** A steering column; the only zones in the one-thumb scheme. */
+/** A steering half; the only zones in the one-thumb scheme. */
 export type Side = 'left' | 'right';
 
-export type Zone = Side | 'brake' | 'gas';
+export type Zone = Side | 'brake' | 'gas' | 'stick';
 
-/** Touch columns from the left edge of the screen, per scheme. */
+/** Controls per scheme, in the order they sit across the screen. */
 export const ZONES: Record<ControlScheme, readonly Zone[]> = {
   thumb: ['left', 'right'],
-  pedals: ['gas', 'brake', 'left', 'right'],
+  pedals: ['gas', 'brake', 'stick'],
 };
+
+/** Where the two-thumb controls sit, in CSS px, shared with the HUD that draws them. */
+export interface PadLayout {
+  /** Gap from the screen edges (the safe area is added on top). */
+  inset: number;
+  /** Pedal diameter and the gap between the two pedals. */
+  pedalSize: number;
+  pedalGap: number;
+  /** Stick base radius. Full steer is the thumb this far from the centre. */
+  stickRadius: number;
+  /** Touches above this fraction of the screen height are not controls. */
+  bandTop: number;
+}
 
 /** Normalised control state the game reads each physics step. */
 export interface InputState {
@@ -42,8 +56,10 @@ export interface InputState {
 }
 
 export interface RawControls {
-  /** -1, 0 or 1. */
+  /** -1..1. Digital (-1, 0 or 1) unless `analog`. */
   steer: number;
+  /** True when steer comes from the stick and should be applied as is, not ramped. */
+  analog: boolean;
   handbrake: boolean;
   /** 0 or 1. Automatic in the one-thumb scheme: on unless the handbrake is. */
   throttle: number;
@@ -58,18 +74,46 @@ export interface Keys {
 
 export const NO_KEYS: Keys = { left: false, right: false, brake: false, gas: false };
 
-/** Which column a touch at `xFraction` (0 at the left edge, 1 at the right) lands in. */
-export function zoneAt(xFraction: number, scheme: ControlScheme): Zone {
-  const zones = ZONES[scheme];
-  const i = Math.min(zones.length - 1, Math.max(0, Math.floor(xFraction * zones.length)));
-  return zones[i] ?? 'left';
+/** Below this fraction of the stick radius the thumb counts as centred. */
+const STICK_DEADZONE = 0.08;
+
+/**
+ * Which control a touch at (x, y) lands on, for a screen of the given size,
+ * or null when it is not a control. One thumb: the halves, at any height.
+ * Two thumbs: in the band at the bottom, the left half is the pedals (gas on
+ * the outside, handbrake inside) and the right half is the stick.
+ */
+export function zoneAt(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  scheme: ControlScheme,
+  pad: PadLayout,
+): Zone | null {
+  if (scheme === 'thumb') return x < width / 2 ? 'left' : 'right';
+  if (y < height * pad.bandTop) return null;
+  if (x >= width / 2) return 'stick';
+  return x < pad.inset + pad.pedalSize + pad.pedalGap / 2 ? 'gas' : 'brake';
 }
 
-/** Pure mapping from held zones (in press order) and keys to steer, handbrake and throttle. */
+/** Steer for a stick thumb `dx` px right of the stick centre. */
+export function stickSteer(dx: number, radius: number): number {
+  const raw = Math.max(-1, Math.min(1, dx / radius));
+  if (Math.abs(raw) < STICK_DEADZONE) return 0;
+  return Math.sign(raw) * ((Math.abs(raw) - STICK_DEADZONE) / (1 - STICK_DEADZONE));
+}
+
+/**
+ * Pure mapping from held zones (in press order), keys and the stick to
+ * steer, handbrake and throttle. `stick` is the stick steer while a thumb is
+ * on it, or null.
+ */
 export function resolveControls(
   heldInOrder: readonly Zone[],
   keys: Keys,
   scheme: ControlScheme = 'thumb',
+  stick: number | null = null,
 ): RawControls {
   const left = heldInOrder.includes('left');
   const right = heldInOrder.includes('right');
@@ -82,11 +126,12 @@ export function resolveControls(
   }
   if (scheme === 'thumb') {
     const handbrake = (left && right) || keys.brake;
-    return { steer, handbrake, throttle: handbrake ? 0 : 1 };
+    return { steer, analog: false, handbrake, throttle: handbrake ? 0 : 1 };
   }
   const handbrake = heldInOrder.includes('brake') || keys.brake;
   const throttle = heldInOrder.includes('gas') || keys.gas ? 1 : 0;
-  return { steer, handbrake, throttle };
+  if (stick !== null) return { steer: stick, analog: true, handbrake, throttle };
+  return { steer, analog: false, handbrake, throttle };
 }
 
 export interface SteerRamp {
@@ -113,9 +158,11 @@ export function rampSteer(current: number, target: number, dt: number, r: SteerR
 }
 
 /**
- * Advance the smoothed state by one physics step from raw controls. Throttle
- * rises over `throttleSeconds` (instantly when 0) and drops at once, so a
- * pressed pedal eases in and a released one lets go. Mutates and returns `state`.
+ * Advance the smoothed state by one physics step from raw controls. Digital
+ * steer goes through the two-stage ramp; analog steer from the stick is
+ * applied as is. Throttle rises over `throttleSeconds` (instantly when 0)
+ * and drops at once, so a pressed pedal eases in and a released one lets go.
+ * Mutates and returns `state`.
  */
 export function advanceControls(
   state: InputState,
@@ -124,7 +171,7 @@ export function advanceControls(
   ramp: SteerRamp,
   throttleSeconds = 0,
 ): InputState {
-  state.steer = rampSteer(state.steer, raw.steer, dt, ramp);
+  state.steer = raw.analog ? raw.steer : rampSteer(state.steer, raw.steer, dt, ramp);
   state.handbrake = raw.handbrake;
   state.throttle =
     throttleSeconds > 0 && raw.throttle > state.throttle
@@ -133,22 +180,38 @@ export function advanceControls(
   return state;
 }
 
+interface Touch {
+  zone: Zone;
+  x: number;
+}
+
 export class TouchControls {
   /** Smoothed state, updated by `sample`. */
   readonly state: InputState = { throttle: 0, steer: 0, handbrake: false };
   /** Which zones are currently held, for on-screen cues. */
-  readonly held: Record<Zone, boolean> = { left: false, right: false, brake: false, gas: false };
+  readonly held: Record<Zone, boolean> = {
+    left: false,
+    right: false,
+    brake: false,
+    gas: false,
+    stick: false,
+  };
   /** How touches map to zones. Changed from the title screen. */
   scheme: ControlScheme = 'thumb';
+  /** Where the two-thumb controls sit. The HUD draws them from the same numbers. */
+  pad: PadLayout = { inset: 24, pedalSize: 80, pedalGap: 12, stickRadius: 70, bandTop: 0.55 };
+  /** Extra inset at the right edge, for the safe area; the HUD sets it. */
+  safeRight = 0;
 
   /** Called on Escape or P for desktop pause. */
   onPauseKey: (() => void) | null = null;
 
-  private readonly pointers = new Map<number, Zone>();
+  private readonly pointers = new Map<number, Touch>();
   private readonly keys = new Set<string>();
 
   constructor(private readonly target: HTMLElement) {
     target.addEventListener('pointerdown', this.onDown);
+    target.addEventListener('pointermove', this.onMove);
     target.addEventListener('pointerup', this.onUp);
     target.addEventListener('pointercancel', this.onUp);
     // A long press anywhere, HUD included, must never open the browser's menu
@@ -160,6 +223,7 @@ export class TouchControls {
 
   dispose(): void {
     this.target.removeEventListener('pointerdown', this.onDown);
+    this.target.removeEventListener('pointermove', this.onMove);
     this.target.removeEventListener('pointerup', this.onUp);
     this.target.removeEventListener('pointercancel', this.onUp);
     window.removeEventListener('contextmenu', preventDefault);
@@ -168,11 +232,21 @@ export class TouchControls {
     window.removeEventListener('blur', this.reset);
   }
 
+  /** Screen x of the stick's centre. */
+  stickCentreX(): number {
+    return window.innerWidth - this.safeRight - this.pad.inset - this.pad.stickRadius;
+  }
+
   /** Raw, unsmoothed controls right now. */
   raw(): RawControls {
     const k = this.keys;
+    const touches = [...this.pointers.values()];
+    const onStick = touches.find((t) => t.zone === 'stick');
+    const stick = onStick
+      ? stickSteer(onStick.x - this.stickCentreX(), this.pad.stickRadius)
+      : null;
     return resolveControls(
-      [...this.pointers.values()],
+      touches.map((t) => t.zone),
       {
         left: k.has('arrowleft') || k.has('a'),
         right: k.has('arrowright') || k.has('d'),
@@ -180,13 +254,14 @@ export class TouchControls {
         gas: k.has('arrowup') || k.has('w'),
       },
       this.scheme,
+      stick,
     );
   }
 
   /** Advance the smoothed state by one physics step. */
   sample(dt: number, ramp: SteerRamp, throttleSeconds = 0): InputState {
     advanceControls(this.state, this.raw(), dt, ramp, throttleSeconds);
-    const zones = [...this.pointers.values()];
+    const zones = [...this.pointers.values()].map((t) => t.zone);
     for (const z of Object.keys(this.held) as Zone[]) this.held[z] = zones.includes(z);
     return this.state;
   }
@@ -203,8 +278,22 @@ export class TouchControls {
 
   private readonly onDown = (e: PointerEvent): void => {
     e.preventDefault();
-    this.pointers.set(e.pointerId, zoneAt(e.clientX / window.innerWidth, this.scheme));
+    const zone = zoneAt(
+      e.clientX,
+      e.clientY,
+      window.innerWidth,
+      window.innerHeight,
+      this.scheme,
+      this.pad,
+    );
+    if (!zone) return;
+    this.pointers.set(e.pointerId, { zone, x: e.clientX });
     this.target.setPointerCapture(e.pointerId);
+  };
+
+  private readonly onMove = (e: PointerEvent): void => {
+    const t = this.pointers.get(e.pointerId);
+    if (t) t.x = e.clientX;
   };
 
   private readonly onUp = (e: PointerEvent): void => {

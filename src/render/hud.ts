@@ -1,4 +1,10 @@
-import { isControlScheme, ZONES, type ControlScheme, type Zone } from '../core/input';
+import {
+  isControlScheme,
+  ZONES,
+  type ControlScheme,
+  type PadLayout,
+  type Zone,
+} from '../core/input';
 import { isGameMode, type GameMode } from '../core/mode';
 import type { GameState } from '../core/state';
 
@@ -21,6 +27,10 @@ export class Hud {
   private readonly zonesEl: HTMLElement;
   private readonly vignetteEl: HTMLElement;
   private zoneEls = new Map<Zone, HTMLElement>();
+  private readonly padEl: HTMLElement;
+  private readonly padParts: Record<'gas' | 'brake' | 'stick', HTMLElement>;
+  private readonly knobEl: HTMLElement;
+  private knobTravel = 0;
 
   // Title / game over
   private readonly titleBestEl: HTMLElement;
@@ -103,6 +113,11 @@ export class Hud {
     playing.innerHTML = `
       <div class="vignette"></div>
       <div class="zones"></div>
+      <div class="pad">
+        <div class="pedal pedal-gas"><span>gas</span></div>
+        <div class="pedal pedal-brake"><span>brake</span></div>
+        <div class="stick"><div class="stick-knob"></div></div>
+      </div>
       <div class="hud-timebar"></div>
       <div class="hud-score"><span class="label">score</span><span class="value">0</span></div>
       <div class="hud-timer">60.0</div>
@@ -125,6 +140,13 @@ export class Hud {
     this.ringEl.style.strokeDasharray = String(this.ringLength);
     this.zonesEl = must(playing.querySelector('.zones'));
     this.vignetteEl = must(playing.querySelector('.vignette'));
+    this.padEl = must(playing.querySelector('.pad'));
+    this.padParts = {
+      gas: must(playing.querySelector('.pedal-gas')),
+      brake: must(playing.querySelector('.pedal-brake')),
+      stick: must(playing.querySelector('.stick')),
+    };
+    this.knobEl = must(playing.querySelector('.stick-knob'));
     playing.addEventListener('click', (e) => {
       this.dispatch(e);
     });
@@ -226,8 +248,10 @@ export class Hud {
         return thumb;
       }),
     );
+    // Two thumbs draws its own controls; one thumb gets the faint hold cues
+    this.padEl.classList.toggle('show', scheme === 'pedals');
     this.zoneEls = new Map(
-      zones.map((z) => {
+      (scheme === 'thumb' ? zones : []).map((z) => {
         const zone = el('div', `zone zone-${z}`);
         zone.textContent = ZONE_LABEL[scheme][z];
         return [z, zone];
@@ -242,7 +266,7 @@ export class Hud {
     const how =
       this.scheme === 'thumb'
         ? 'Hold a side to steer, both for handbrake'
-        : 'Right thumb steers, left thumb holds the gas or pulls the handbrake';
+        : 'Right thumb on the stick steers, left thumb holds the gas or pulls the handbrake';
     this.titleSubEl.textContent = where + how;
     this.titleTagEl.textContent = `${this.scheme === 'thumb' ? 'One thumb' : 'Two thumbs'}. Sixty seconds.`;
   }
@@ -304,6 +328,24 @@ export class Hud {
     this.vignetteEl.classList.toggle('show', off);
   }
 
+  /** Sizes and places the pedals and stick from the layout the input reads touches with. */
+  setPadLayout(pad: PadLayout): void {
+    const style = this.root.style;
+    style.setProperty('--pad-inset', `${String(pad.inset)}px`);
+    style.setProperty('--pedal-size', `${String(pad.pedalSize)}px`);
+    style.setProperty('--pedal-gap', `${String(pad.pedalGap)}px`);
+    style.setProperty('--stick-radius', `${String(pad.stickRadius)}px`);
+    this.knobTravel = pad.stickRadius - KNOB_RADIUS;
+  }
+
+  /** Lights the held pedals and slides the stick knob to the current steer. */
+  setPad(held: Readonly<Record<Zone, boolean>>, steer: number): void {
+    for (const part of ['gas', 'brake', 'stick'] as const) {
+      this.padParts[part].classList.toggle('held', held[part]);
+    }
+    this.knobEl.style.setProperty('--knob-x', `${(steer * this.knobTravel).toFixed(1)}px`);
+  }
+
   /** Faint column cues for new players, up to their first lap; `show` fades them in and out. */
   setZones(show: boolean, held: Readonly<Record<Zone, boolean>>): void {
     this.zonesEl.classList.toggle('show', show);
@@ -328,14 +370,17 @@ export class Hud {
   }
 }
 
+/** Half the stick knob's CSS size; the knob travels the rest of the radius. */
+const KNOB_RADIUS = 28;
+
 const HINT_LABEL: Record<ControlScheme, Record<Zone, string>> = {
-  thumb: { left: 'hold', right: 'hold', brake: '', gas: '' },
-  pedals: { left: '◀', right: '▶', brake: 'brake', gas: 'gas' },
+  thumb: { left: 'hold', right: 'hold', brake: '', gas: '', stick: '' },
+  pedals: { left: '', right: '', brake: 'brake', gas: 'gas', stick: '◀ ▶' },
 };
 
 const ZONE_LABEL: Record<ControlScheme, Record<Zone, string>> = {
-  thumb: { left: '◀ hold', right: 'hold ▶', brake: '', gas: '' },
-  pedals: { left: '◀', right: '▶', brake: 'brake', gas: 'gas' },
+  thumb: { left: '◀ hold', right: 'hold ▶', brake: '', gas: '', stick: '' },
+  pedals: { left: '', right: '', brake: '', gas: '', stick: '' },
 };
 
 export function fmtScore(n: number): string {

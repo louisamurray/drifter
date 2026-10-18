@@ -29,6 +29,18 @@ export const config = {
     },
     /** Seconds for a pressed gas pedal to reach full throttle in the two-thumb scheme. */
     throttleSeconds: 0.15,
+    /**
+     * Two-thumb controls in the bottom corners, in CSS px: pedals bottom left
+     * (gas in the corner, handbrake beside it), stick bottom right. Touches
+     * above `bandTop` of the screen height are not controls.
+     */
+    pad: {
+      inset: 24,
+      pedalSize: 80,
+      pedalGap: 12,
+      stickRadius: 70,
+      bandTop: 0.55,
+    },
   },
   physics: {
     /** World units are pixels at zoom 1. */
