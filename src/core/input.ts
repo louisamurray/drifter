@@ -65,6 +65,22 @@ export function rampSteer(current: number, target: number, dt: number, r: SteerR
   return Math.sign(target) * Math.min(1, mag + rate * dt);
 }
 
+/**
+ * Advance the smoothed state by one physics step from raw controls. Throttle
+ * is automatic: full unless the handbrake is held. Mutates and returns `state`.
+ */
+export function advanceControls(
+  state: InputState,
+  raw: RawControls,
+  dt: number,
+  ramp: SteerRamp,
+): InputState {
+  state.steer = rampSteer(state.steer, raw.steer, dt, ramp);
+  state.handbrake = raw.handbrake;
+  state.throttle = raw.handbrake ? 0 : 1;
+  return state;
+}
+
 export class TouchControls {
   /** Smoothed state, updated by `sample`. */
   readonly state: InputState = { throttle: 0, steer: 0, handbrake: false };
@@ -107,15 +123,9 @@ export class TouchControls {
     );
   }
 
-  /**
-   * Advance the smoothed state by one physics step. Throttle is automatic:
-   * full unless the handbrake is held.
-   */
+  /** Advance the smoothed state by one physics step. */
   sample(dt: number, ramp: SteerRamp): InputState {
-    const r = this.raw();
-    this.state.steer = rampSteer(this.state.steer, r.steer, dt, ramp);
-    this.state.handbrake = r.handbrake;
-    this.state.throttle = r.handbrake ? 0 : 1;
+    advanceControls(this.state, this.raw(), dt, ramp);
     this.held.left = [...this.pointers.values()].includes('left');
     this.held.right = [...this.pointers.values()].includes('right');
     return this.state;
