@@ -27,14 +27,15 @@ A simple, satisfying car-drifting game for mobile browsers. Top-down, one-thumb 
 - Track is a closed loop with a mix of hairpins, sweepers and a long straight, about 3 to 4 screen-heights per lap.
 
 ### 2.2 Controls (mobile first)
-Two schemes, chosen on the title screen and remembered. **Two thumbs** is the default: the screen is four equal columns, the right thumb steers and the left thumb drives.
+Two schemes, chosen on the title screen and remembered. **Two thumbs** is the default: visible controls in the bottom corners, the left thumb drives and the right thumb steers. Touches above the bottom 45% of the screen are not controls, so the pause button and the HUD are safe.
 
-| Column | Action |
+| Control | Action |
 |---|---|
-| Outer left | Gas. Nothing else moves the car: lift to coast, hold to go. The gas eases in over 0.15 s and lets go at once. There is no corner lift in this scheme, speed is the player's to choose, and the tail lights glow whenever the gas is off |
-| Inner left | Handbrake |
-| Inner right | Steer left, with the same two-stage ramp as below |
-| Outer right | Steer right |
+| Gas (bottom-left corner) | Nothing else moves the car: lift to coast, hold to go. The gas eases in over 0.15 s and lets go at once. There is no corner lift in this scheme, speed is the player's to choose, and the tail lights glow whenever the gas is off |
+| Handbrake (beside the gas) | Grip drops, speed scrubs, rear steps out. Works with the gas held |
+| Stick (bottom-right corner) | A fixed base with a knob. How far the thumb sits left or right of the centre is the steer, proportional, with a small deadzone, applied directly rather than through the two-stage ramp. Up and down are ignored. Touch hits anywhere in the bottom-right quarter grab it, so the thumb need not land on the base |
+
+The drag-to-steer objection below does not apply here: the stick's centre is drawn on screen, and throttle lives on the other thumb.
 
 **One thumb** keeps the original scheme, with automatic throttle and the corner lift:
 
@@ -87,7 +88,7 @@ Tunables live in one config object so tuning is a one-file job: `maxSpeed`, `acc
 5. **Pause** — resume / restart / sound. Reached from the small button under the timer.
 
 ### 2.7 Free drift (open lot)
-A second course, chosen on the title screen and remembered: a rounded slab of asphalt about 1000 by 1400 world units, grass beyond its edge, and a faint painted ring in the middle to slide around. There is nothing to follow, so there is no road assist, no corner lift and no laps; only the thumbs steer the car. The 60-second run, chain, multiplier and scoring are unchanged, and leaving the slab ends a chain exactly as running wide does on the circuit. Each mode keeps its own best score. The title ghost on the lot chases a point round a figure of eight, pulling the handbrake through the direction changes, so the screen shows what the mode is for; a test keeps it on the asphalt and sliding for most of its run. The rubber canvas and the game-over overview are sized from the course's bounds, so the share frame is the whole slab with the run drawn on it.
+A second course, chosen on the title screen and remembered: a rounded slab of asphalt 1800 by 2600 world units (about five screens tall), grass beyond its edge, faint parking bays painted along the long edges for scale and motion, and a faint painted ring in the middle to slide around. The rubber canvas caps its pixel count and lowers its resolution for a course this large rather than its frame rate. There is nothing to follow, so there is no road assist, no corner lift and no laps; only the thumbs steer the car. The 60-second run, chain, multiplier and scoring are unchanged, and leaving the slab ends a chain exactly as running wide does on the circuit. Each mode keeps its own best score. The title ghost on the lot chases a point round a figure of eight, pulling the handbrake through the direction changes, so the screen shows what the mode is for; a test keeps it on the asphalt and sliding for most of its run. The rubber canvas and the game-over overview are sized from the course's bounds, so the share frame is the whole slab with the run drawn on it.
 
 ---
 
