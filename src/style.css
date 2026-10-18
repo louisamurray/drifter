@@ -653,3 +653,17 @@ body {
     transition: none;
   }
 }
+
+/* Mode toggle on the title screen: circuit or the open lot. */
+.mode-toggle {
+  position: absolute;
+  top: calc(var(--sat) + 12px);
+  left: calc(var(--sal) + 12px);
+  display: flex;
+  gap: 6px;
+}
+.mode-chip.on {
+  background: var(--cream);
+  color: var(--asphalt);
+  border-color: var(--cream);
+}

@@ -1,3 +1,4 @@
+import { isGameMode, type GameMode } from '../core/mode';
 import type { GameState } from '../core/state';
 
 /**
@@ -24,6 +25,8 @@ export class Hud {
   // Title / game over
   private readonly titleBestEl: HTMLElement;
   private readonly installEl: HTMLElement;
+  private readonly titleSubEl: HTMLElement;
+  private readonly modeChips: HTMLElement[];
   private readonly finalScoreEl: HTMLElement;
   private readonly finalBestEl: HTMLElement;
   private readonly newBestEl: HTMLElement;
@@ -33,6 +36,7 @@ export class Hud {
   private readonly shareBtn: HTMLButtonElement;
 
   onStart: (() => void) | null = null;
+  onMode: ((mode: GameMode) => void) | null = null;
   onRestart: (() => void) | null = null;
   onResume: (() => void) | null = null;
   onShare: (() => void) | null = null;
@@ -48,6 +52,10 @@ export class Hud {
     const title = el('div', 'screen screen-title');
     title.innerHTML = `
       <button class="chip sound-toggle" data-act="sound" aria-label="Sound">sound on</button>
+      <div class="mode-toggle" role="group" aria-label="Mode">
+        <button class="chip mode-chip" data-act="mode" data-mode="track">Circuit</button>
+        <button class="chip mode-chip" data-act="mode" data-mode="free">Free drift</button>
+      </div>
       <div class="title-lockup">
         <div class="title-logo">DRIFTER</div>
         <div class="title-tag">One thumb. Sixty seconds.</div>
@@ -70,6 +78,8 @@ export class Hud {
     this.soundButtons.push(must(title.querySelector('.sound-toggle')));
     this.titleBestEl = must(title.querySelector('.title-best'));
     this.installEl = must(title.querySelector('.title-install'));
+    this.titleSubEl = must(title.querySelector('.title-sub'));
+    this.modeChips = [...title.querySelectorAll<HTMLElement>('.mode-chip')];
     this.screens.set('title', title);
 
     // Countdown
@@ -164,7 +174,10 @@ export class Hud {
     else if (act === 'share') this.onShare?.();
     else if (act === 'pause') this.onPause?.();
     else if (act === 'sound') this.onSound?.();
-    else return false;
+    else if (act === 'mode') {
+      const mode = target.closest<HTMLElement>('[data-mode]')?.dataset.mode;
+      if (isGameMode(mode)) this.onMode?.(mode);
+    } else return false;
     return true;
   }
 
@@ -173,6 +186,15 @@ export class Hud {
       b.textContent = on ? 'Sound on' : 'Sound off';
       b.classList.toggle('off', !on);
     }
+  }
+
+  /** Highlights the chosen mode and says what the player is in for. */
+  setMode(mode: GameMode): void {
+    for (const chip of this.modeChips) chip.classList.toggle('on', chip.dataset.mode === mode);
+    this.titleSubEl.textContent =
+      mode === 'track'
+        ? 'Hold a side to steer, both for handbrake'
+        : 'An open lot and nothing to follow. Hold a side to steer, both for handbrake';
   }
 
   show(state: GameState): void {

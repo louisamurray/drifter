@@ -3,6 +3,7 @@ import { config } from './config';
 import { CanvasSurface } from './core/canvas';
 import { TouchControls } from './core/input';
 import { GameLoop } from './core/loop';
+import type { GameMode } from './core/mode';
 import type { GameState } from './core/state';
 import { autopilot } from './game/autopilot';
 import {
@@ -18,6 +19,7 @@ import {
 } from './game/car';
 import type { InputState } from './core/input';
 import { createLapState, updateLaps } from './game/laps';
+import { createLotPilot, insideLot, lotBounds, lotStartPose } from './game/lot';
 import {
   bankShakeAmplitude,
   createShake,
@@ -34,6 +36,7 @@ import {
   nearestOnTrack,
   startPose,
   trackBounds,
+  type Bounds,
 } from './game/track';
 import { createCamera, fitOverview, moveCameraTo, updateCamera } from './render/camera';
 import {
@@ -42,6 +45,7 @@ import {
   drawChain,
   drawDebug,
   drawGrass,
+  drawLot,
   drawPopups,
   drawSmoke,
   drawTrack,
@@ -54,7 +58,7 @@ import { haptic, hapticsDescription } from './core/haptics';
 import { fmtScore, Hud } from './render/hud';
 import { mountDebugPanel } from './debug/panel';
 import { debugState } from './debug/state';
-import { loadBest, saveBest } from './storage';
+import { loadBest, loadMode, saveBest, saveMode } from './storage';
 import { AudioEngine } from './audio/audio';
 
 const canvasEl = document.getElementById('game');
@@ -71,9 +75,44 @@ const audio = new AudioEngine();
 hud.setSound(!audio.muted);
 hud.setInstallHint(!isStandalone() && matchMedia('(pointer: coarse)').matches);
 
+// ---- Courses --------------------------------------------------------------
+
 const track = buildTrack({ ...CIRCUIT, width: config.track.width, scale: config.track.scale });
-const start = startPose(track);
+const TRACK_BOUNDS = trackBounds(track);
+const lot = config.lot;
 const grass: Surface = config.offTrack;
+
+/**
+ * Where the run happens. On the track the car has a road to follow: assist,
+ * corner lift, laps, and grass beyond the edge line. On the lot there is only
+ * asphalt and its edge, so `offTrack` means off the slab and nothing steers
+ * the car but the player.
+ */
+let mode: GameMode = loadMode();
+let start = startFor(mode);
+
+function startFor(m: GameMode): { x: number; y: number; heading: number } {
+  return m === 'track' ? startPose(track) : lotStartPose();
+}
+
+/** Extent of the asphalt and the margin around it, for the rubber canvas and the overview. */
+function courseBounds(m: GameMode): { bounds: Bounds; pad: number } {
+  return m === 'track'
+    ? { bounds: TRACK_BOUNDS, pad: track.width }
+    : { bounds: lotBounds(lot), pad: 40 };
+}
+
+/** One rubber canvas per course, built the first time that course is driven. */
+const skidLayers = new Map<GameMode, SkidLayer>();
+function skidsFor(m: GameMode): SkidLayer {
+  let layer = skidLayers.get(m);
+  if (!layer) {
+    const c = courseBounds(m);
+    layer = new SkidLayer(c.bounds, c.pad * 1.5);
+    skidLayers.set(m, layer);
+  }
+  return layer;
+}
 
 // Run state, rebuilt on every restart
 const car = createCar(start.x, start.y, start.heading);
@@ -84,17 +123,19 @@ let offTrack = false;
 let roadHeading = start.heading;
 let trackIndex = 0;
 let popups: Popup[] = [];
-let best = loadBest();
+let best = loadBest(mode);
 let newBest = false;
 let countdownLeft = 0;
 let lastTick = 0;
 /** What the car looked like it was doing on the last physics step, for the renderer. */
 const carLook = { steer: 0, roll: 0, brake: 0 };
 
-const skids = new SkidLayer(trackBounds(track), track.width * 1.5);
+let skids = skidsFor(mode);
 const smoke = new SmokePool(config.juice.smokeMax);
 const shake = createShake();
 let everDrifted = false;
+/** The title ghost's driver on the lot. The circuit's ghost is the stateless autopilot. */
+let lotGhost = createLotPilot(lot);
 
 const camera = createCamera(car);
 let state: GameState = 'title';
@@ -110,6 +151,7 @@ function resetRun(): void {
   popups = [];
   newBest = false;
   everDrifted = false;
+  lotGhost = createLotPilot(lot);
   hud.setZones(false, false, false);
   hud.setOffRoad(false);
   skids.clear();
@@ -141,12 +183,26 @@ function setState(next: GameState): void {
     newBest = score.score > best;
     if (newBest) {
       best = score.score;
-      saveBest(best);
+      saveBest(mode, best);
     }
     hud.setGameOver(score.score, best, newBest);
   }
 }
 
+/** Switch course from the title screen. Each mode keeps its own best. */
+function setMode(next: GameMode): void {
+  if (next === mode) return;
+  mode = next;
+  saveMode(mode);
+  start = startFor(mode);
+  skids = skidsFor(mode);
+  best = loadBest(mode);
+  hud.setMode(mode);
+  setState('title');
+}
+
+hud.setMode(mode);
+hud.onMode = setMode;
 hud.onStart = () => {
   audio.unlock();
   setState('countdown');
@@ -184,7 +240,8 @@ input.onPauseKey = () => {
 };
 
 async function share(): Promise<void> {
-  const text = `I scored ${fmtScore(score.score)} in Drifter. Can you beat it?`;
+  const where = mode === 'track' ? 'in Drifter' : "in Drifter's open lot";
+  const text = `I scored ${fmtScore(score.score)} ${where}. Can you beat it?`;
   const url = location.origin + location.pathname;
   try {
     const file = await captureFrame();
@@ -212,19 +269,26 @@ function captureFrame(): Promise<File | null> {
 function stepPhysics(dt: number, ctl: InputState): void {
   Object.assign(prev, car);
   const p = config.physics;
-  const assist = assistYaw(car.heading, roadHeading, car.drifting, offTrack, p);
+  const onRoad = mode === 'track';
+  const assist = onRoad ? assistYaw(car.heading, roadHeading, car.drifting, offTrack, p) : 0;
   const forward = telemetry(car).forwardSpeed;
-  const lift = cornerLift(forward, minRadiusAhead(track, trackIndex, liftLookahead(forward, p)), p);
+  const lift = onRoad
+    ? cornerLift(forward, minRadiusAhead(track, trackIndex, liftLookahead(forward, p)), p)
+    : 0;
   stepCar(car, ctl, dt, p, offTrack ? grass : ROAD, assist, lift);
   carLook.steer = ctl.steer;
   carLook.brake = ctl.handbrake ? 1 : lift;
-  const q = nearestOnTrack(track, car.x, car.y);
-  trackIndex = q.index;
-  const tp = track.points[q.index];
-  if (tp) roadHeading = Math.atan2(tp.ty, tp.tx);
-  offTrack = isOffTrack(track, q.distance);
   const lapsBefore = laps.laps;
-  updateLaps(laps, q.s, track.length, dt);
+  if (onRoad) {
+    const q = nearestOnTrack(track, car.x, car.y);
+    trackIndex = q.index;
+    const tp = track.points[q.index];
+    if (tp) roadHeading = Math.atan2(tp.ty, tp.tx);
+    offTrack = isOffTrack(track, q.distance);
+    updateLaps(laps, q.s, track.length, dt);
+  } else {
+    offTrack = !insideLot(lot, car.x, car.y);
+  }
   const t = telemetry(car);
   carLook.roll = Math.max(-1, Math.min(1, t.lateralSpeed / config.juice.fullIntensityLateral));
   layRubber(t.lateralSpeed, dt);
@@ -305,10 +369,15 @@ function popup(text: string, x: number, y: number, color: string, size: number):
   return { text, x, y, age: 0, life: 1.1, color, size };
 }
 
+/** The course's own driver: laps the circuit, or draws an eight on the lot. */
+function ghostInput(dt: number, aggression = 1): InputState {
+  return mode === 'track' ? autopilot(track, car, aggression) : lotGhost(car, dt);
+}
+
 function update(dt: number): void {
   switch (state) {
     case 'title': {
-      stepPhysics(dt, autopilot(track, car));
+      stepPhysics(dt, ghostInput(dt));
       break;
     }
     case 'countdown': {
@@ -334,10 +403,12 @@ function update(dt: number): void {
     }
     case 'playing': {
       const ctl = debugState.autopilot
-        ? autopilot(track, car, debugState.aggression)
+        ? ghostInput(dt, debugState.aggression)
         : input.sample(dt, config.input.steer);
       stepPhysics(dt, ctl);
-      hud.setZones(best === 0 && laps.laps === 0, input.held.left, input.held.right);
+      // Hold cues stay up for a new player until their first lap, or first banked chain on the lot
+      const learning = best === 0 && (mode === 'track' ? laps.laps === 0 : score.score === 0);
+      hud.setZones(learning, input.held.left, input.held.right);
       hud.setOffRoad(offTrack);
       break;
     }
@@ -347,9 +418,10 @@ function update(dt: number): void {
     case 'gameover': {
       Object.assign(prev, car);
       const band = hud.overviewBand();
+      const c = courseBounds(mode);
       const o = fitOverview(
-        trackBounds(track),
-        track.width,
+        c.bounds,
+        c.pad,
         viewport.width,
         viewport.height,
         band.top,
@@ -389,7 +461,8 @@ function render(alpha: number): void {
 
   beginWorld(ctx, viewport, camera, shake);
   drawGrass(ctx, viewport, camera);
-  drawTrack(ctx, track);
+  if (mode === 'track') drawTrack(ctx, track);
+  else drawLot(ctx, lot);
   skids.draw(ctx);
   drawSmoke(ctx, smoke);
   drawCar(ctx, x, y, heading, carLook);
@@ -428,7 +501,7 @@ function render(alpha: number): void {
       input.state.steer,
       input.state.throttle,
       safeAreaTop() + 70,
-      `${audio.describe()}  haptics: ${hapticsDescription()}`,
+      `${mode}  ${audio.describe()}  haptics: ${hapticsDescription()}`,
     );
   }
 }
