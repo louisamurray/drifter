@@ -4,3 +4,9 @@ coverage/
 .vite/
 *.local
 .DS_Store
+
+# Xcode
+ios/**/xcuserdata/
+ios/**/*.xcuserstate
+ios/build/
+ios/DerivedData/

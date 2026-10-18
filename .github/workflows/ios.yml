@@ -1,0 +1,52 @@
+name: iOS
+
+on:
+  push:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios.yml'
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+      - name: Pick a simulator
+        id: sim
+        run: |
+          pick() {
+            xcrun simctl list devices available -j | python3 -c 'import json, sys; ds = [d["udid"] for r, v in json.load(sys.stdin)["devices"].items() if "iOS" in r for d in v if d.get("isAvailable") and d["name"].startswith("iPhone")]; print(ds[-1] if ds else "")'
+          }
+          UDID=$(pick)
+          if [ -z "$UDID" ]; then
+            echo "No iPhone simulator available; downloading the iOS platform"
+            xcodebuild -downloadPlatform iOS
+            UDID=$(pick)
+          fi
+          if [ -z "$UDID" ]; then
+            echo "Still no iPhone simulator" >&2
+            xcrun simctl list devices
+            exit 1
+          fi
+          xcrun simctl list devices | grep "$UDID"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+      - name: Build and test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project ios/Drifter.xcodeproj \
+            -scheme Drifter \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee xcodebuild.log | (command -v xcbeautify >/dev/null && xcbeautify || cat)
+      - name: Errors
+        if: failure()
+        run: grep -E "error:|failed|Testing failed" xcodebuild.log | head -100 || true
