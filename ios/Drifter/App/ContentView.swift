@@ -105,13 +105,6 @@ struct SoundChip: View {
 struct TitleView: View {
     @EnvironmentObject private var game: GameViewModel
 
-    private var hint: String {
-        switch game.scheme {
-        case .thumb: return "Hold a side to steer. Hold both for the handbrake."
-        case .pedals: return "Left thumb: gas and handbrake. Right thumb: point the stick."
-        }
-    }
-
     var body: some View {
         ZStack {
             // Darken the top and bottom so text reads over the ghost lap
@@ -144,7 +137,7 @@ struct TitleView: View {
                         .tracking(2)
                         .foregroundStyle(Color.hudText)
                         .shadow(color: .black.opacity(0.5), radius: 8, y: 4)
-                    Text(game.scheme == .thumb ? "One thumb. Sixty seconds." : "Two thumbs. Sixty seconds.")
+                    Text("Two thumbs. Sixty seconds.")
                         .font(.game(12))
                         .tracking(1)
                         .foregroundStyle(Color.hudTextDim)
@@ -153,12 +146,7 @@ struct TitleView: View {
                 Spacer()
 
                 VStack(spacing: 14) {
-                    HStack(spacing: 6) {
-                        ForEach(ControlScheme.allCases, id: \.self) { s in
-                            Chip(title: s.title, selected: game.scheme == s) { game.setScheme(s) }
-                        }
-                    }
-                    Text(hint)
+                    Text("Left thumb: gas and handbrake. Right thumb: point the stick where the car should go.")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.hudTextDim)
                         .multilineTextAlignment(.center)

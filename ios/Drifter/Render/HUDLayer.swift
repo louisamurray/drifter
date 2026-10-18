@@ -20,8 +20,6 @@ final class HUDLayer: SKNode {
     private let brakeLabel = SKLabelNode(fontNamed: GameFont.name)
     private let stickBase = SKShapeNode(circleOfRadius: 70)
     private let stickKnob = SKShapeNode(circleOfRadius: 26)
-    private let cueLeft = SKLabelNode(fontNamed: GameFont.name)
-    private let cueRight = SKLabelNode(fontNamed: GameFont.name)
     private let vignette = SKSpriteNode()
     private var vignetteSize = CGSize.zero
     private let playing = SKNode()
@@ -93,16 +91,6 @@ final class HUDLayer: SKNode {
         stickBase.addChild(stickKnob)
         playing.addChild(stickBase)
 
-        for (cue, text) in [(cueLeft, "HOLD TO STEER LEFT"), (cueRight, "HOLD TO STEER RIGHT")] {
-            cue.fontSize = 10
-            cue.fontColor = Palette.hudTextDim
-            cue.text = text
-            cue.verticalAlignmentMode = .center
-            cue.horizontalAlignmentMode = .center
-            cue.alpha = 0
-            playing.addChild(cue)
-        }
-
         vignette.alpha = 0
         vignette.zPosition = -1
         playing.addChild(vignette)
@@ -137,8 +125,6 @@ final class HUDLayer: SKNode {
         brake.position = CGPoint(x: gx + pad.pedalSize + pad.pedalGap, y: py)
         let sr = pad.inset + pad.stickRadius
         stickBase.position = CGPoint(x: width - safeRight - sr, y: safeBottom + sr)
-        cueLeft.position = CGPoint(x: width * 0.25, y: safeBottom + 90)
-        cueRight.position = CGPoint(x: width * 0.75, y: safeBottom + 90)
 
         let size = CGSize(width: width, height: height)
         if size != vignetteSize {
@@ -190,25 +176,16 @@ final class HUDLayer: SKNode {
         }
     }
 
-    func setPad(controls: TouchControls, scheme: ControlScheme) {
-        let pedals = scheme == .pedals
-        gas.isHidden = !pedals
-        brake.isHidden = !pedals
-        stickBase.isHidden = !pedals
-        guard pedals else { return }
+    /// Pedals and stick, lit while held, with the knob following the thumb. A
+    /// new player gets the labels until their first lap or banked chain.
+    func setPad(controls: TouchControls, learning: Bool) {
+        gasLabel.alpha = learning ? 1 : 0.35
+        brakeLabel.alpha = learning ? 1 : 0.35
         gas.fillColor = controls.held[.gas] == true ? Palette.padHeld : Palette.padFill
         brake.fillColor = controls.held[.brake] == true ? Palette.padHeld : Palette.padFill
         stickBase.strokeColor = controls.stickHeld ? Palette.accent : Palette.padStroke
         let travel = CGFloat(controls.pad.stickRadius - 26)
         stickKnob.position = CGPoint(x: CGFloat(controls.stickX) * travel, y: CGFloat(controls.stickY) * travel)
-    }
-
-    func setZones(learning: Bool, scheme: ControlScheme, controls: TouchControls) {
-        let show = learning && scheme == .thumb
-        cueLeft.alpha = show ? (controls.held[.left] == true ? 1 : 0.6) : 0
-        cueRight.alpha = show ? (controls.held[.right] == true ? 1 : 0.6) : 0
-        cueLeft.fontColor = controls.held[.left] == true ? Palette.accent : Palette.hudTextDim
-        cueRight.fontColor = controls.held[.right] == true ? Palette.accent : Palette.hudTextDim
     }
 
     func setOffRoad(_ off: Bool, dt: Double) {

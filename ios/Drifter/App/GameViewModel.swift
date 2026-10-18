@@ -11,7 +11,6 @@ final class GameViewModel: ObservableObject, GameSceneDelegate {
 
     @Published private(set) var state: GameState = .title
     @Published private(set) var mode: GameMode
-    @Published private(set) var scheme: ControlScheme
     @Published private(set) var muted: Bool
     @Published private(set) var countdown = 3
     @Published private(set) var finalScore = 0.0
@@ -24,7 +23,6 @@ final class GameViewModel: ObservableObject, GameSceneDelegate {
         self.run = run
         scene = GameScene(run: run)
         mode = run.mode
-        scheme = run.scheme
         bests = run.bests
         muted = audio.muted
         scene.gameDelegate = self
@@ -61,11 +59,6 @@ final class GameViewModel: ObservableObject, GameSceneDelegate {
     func setMode(_ next: GameMode) {
         run.setMode(next)
         mode = run.mode
-    }
-
-    func setScheme(_ next: ControlScheme) {
-        run.setScheme(next)
-        scheme = run.scheme
     }
 
     func setOverviewBand(top: Double, bottom: Double) {

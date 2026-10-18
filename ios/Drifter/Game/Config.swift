@@ -16,7 +16,6 @@ enum Config {
     }
 
     enum input {
-        static let steer = SteerRamp(stage1: 0.5, stage1Seconds: 0.3, stage2Seconds: 0.5, releaseSeconds: 0.1)
         /// Seconds for a pressed gas pedal to reach full throttle.
         static let throttleSeconds = 0.15
         static let pad = PadLayout(inset: 24, pedalSize: 80, pedalGap: 12, stickRadius: 70, stickFullAngle: 0.6, bandTop: 0.55)

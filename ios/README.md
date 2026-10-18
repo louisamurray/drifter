@@ -2,8 +2,11 @@
 
 A native, fully offline iOS version of Drifter. Swift, SpriteKit and SwiftUI,
 no network code, nothing downloaded at runtime: the fonts are bundled and the
-sound is synthesised. Same two courses, same two control schemes, same scoring
-and the same rubber drawing at the end of a run.
+sound is synthesised. Same two courses, same scoring and the same rubber
+drawing at the end of a run. One control scheme: the left thumb drives on a
+gas pedal and a handbrake, the right thumb points a stick where the car
+should go. The directional stick is what makes a real car drivable with a
+thumb: when the tail steps out, pointing where you want to go is counter-steer.
 
 What changed from the web game is the car. Instead of the arcade slide model it
 is a rigid body on real tyres, tuned so a thumb can still drive it:
@@ -19,14 +22,14 @@ is a rigid body on real tyres, tuned so a thumb can still drive it:
 - Aerodynamic drag, rolling resistance, a torque curve that runs out at the
   limiter, and a grass surface with half the grip and six times the rolling
   resistance.
-- Two things a driver does with the wheel, so the thumbs do not have to: the
+- Two things a driver does with the wheel, so the thumb does not have to: the
   usable lock shrinks with speed to the angle that gives peak cornering force,
   and the wheel counter-steers towards the direction of travel in a slide.
 
-Everything is tuned against the test suite, not by feel: a cautious ghost must
-lap the circuit on the road, a naive thumb with 180 ms of reaction time must
-stay mostly on the road while still drifting, and a figure-of-eight pilot must
-stay on the asphalt of the lot.
+Everything is tuned against the test suite, not by feel: the title ghost must
+lap the circuit on the road, a player on the stick and pedals with 180 ms of
+reaction time must lap on the road while drifting, and a figure-of-eight
+pilot must stay on the asphalt of the lot.
 
 ## Building
 
@@ -35,7 +38,7 @@ Requires Xcode 16 or newer and iOS 17 or newer on the device.
 1. Open `ios/Drifter.xcodeproj`.
 2. Select your team under Signing & Capabilities on the Drifter target.
 3. Run on an iPhone. The simulator works too, but there are no haptics and
-   the multi-touch pedal scheme needs two fingers.
+   the controls need two fingers.
 
 Tests run from Xcode (⌘U) or the command line:
 

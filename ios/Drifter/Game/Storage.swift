@@ -43,14 +43,6 @@ enum Storage {
         defaults.set(mode.rawValue, forKey: "drifter.mode")
     }
 
-    static func loadScheme() -> ControlScheme {
-        ControlScheme(rawValue: defaults.string(forKey: "drifter.controls") ?? "") ?? .pedals
-    }
-
-    static func saveScheme(_ scheme: ControlScheme) {
-        defaults.set(scheme.rawValue, forKey: "drifter.controls")
-    }
-
     static func loadMuted() -> Bool {
         defaults.bool(forKey: "drifter.muted")
     }

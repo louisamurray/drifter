@@ -6,7 +6,7 @@ Deployed to GitHub Pages on every push to `main`: https://louisamurray.github.io
 
 See [docs/PLAN.md](docs/PLAN.md) for the design and build plan.
 
-There is also a native iOS app under [`ios/`](ios/README.md): fully offline, with a rigid-body car on Pacejka tyres in place of the arcade slide model. Open `ios/Drifter.xcodeproj` in Xcode 16 to build it.
+There is also a native iOS app under [`ios/`](ios/README.md): fully offline, two-thumb controls only, with a rigid-body car on Pacejka tyres in place of the arcade slide model. Open `ios/Drifter.xcodeproj` in Xcode 16 to build it.
 
 ## Playing
 

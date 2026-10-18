@@ -360,8 +360,7 @@ final class GameScene: SKScene {
                 chainNode.isHidden = true
             }
             hud.setPlaying(score: run.score.score, timeLeft: run.score.timeLeft, runSeconds: Config.scoring.runSeconds, multiplier: run.score.multiplier, progress: run.score.multiplierProgress)
-            hud.setPad(controls: run.controls, scheme: run.scheme)
-            hud.setZones(learning: run.learning, scheme: run.scheme, controls: run.controls)
+            hud.setPad(controls: run.controls, learning: run.learning)
             hud.setOffRoad(run.offTrack, dt: dt)
         } else {
             chainNode.isHidden = true

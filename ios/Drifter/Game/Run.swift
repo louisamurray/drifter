@@ -52,7 +52,6 @@ final class Run {
     let vehicle = Vehicle.standard
 
     private(set) var mode: GameMode
-    private(set) var scheme: ControlScheme
     private(set) var state: GameState = .title
 
     var car: CarState
@@ -86,7 +85,6 @@ final class Run {
     init() {
         trackExtent = trackBounds(track)
         mode = Storage.loadMode()
-        scheme = Storage.loadScheme()
         let start = mode == .track ? startPose(track) : Lot.startPose
         car = CarState(x: start.x, y: start.y, heading: start.heading)
         prev = car
@@ -94,7 +92,6 @@ final class Run {
         bests = [.track: Storage.loadBest(.track), .free: Storage.loadBest(.free)]
         lotGhost = LotPilot(lot: Config.lot)
         camera = Camera(car: car)
-        controls.scheme = scheme
         resetRun()
     }
 
@@ -185,14 +182,6 @@ final class Run {
         setState(.title)
     }
 
-    func setScheme(_ next: ControlScheme) {
-        guard next != scheme else { return }
-        scheme = next
-        Storage.saveScheme(next)
-        controls.scheme = next
-        controls.reset()
-    }
-
     func setMode(_ next: GameMode) {
         guard next != mode else { return }
         mode = next
@@ -203,7 +192,8 @@ final class Run {
     // MARK: - Simulation
 
     /// `manual` means the player is on the gas pedal: no corner lift, and tail
-    /// lights when they lift. `pointed` means a thumb is on the stick: the
+    /// lights when they lift. The title ghost drives on the automatic throttle
+    /// and lifts for bends. `pointed` means a thumb is on the stick: the
     /// stick owns the heading, so road assist stays out of it.
     private func stepPhysics(dt: Double, ctl: InputState, manual: Bool, pointed: Bool) {
         prev = car
@@ -312,10 +302,9 @@ final class Run {
             camera.follow(car, speed: 0, dt: dt)
             if countdownLeft <= -0.4 { setState(.playing) }
         case .playing:
-            let manual = scheme == .pedals
             controls.carHeading = car.heading
             let ctl = controls.sample(dt: dt)
-            stepPhysics(dt: dt, ctl: ctl, manual: manual, pointed: manual && controls.stickHeld)
+            stepPhysics(dt: dt, ctl: ctl, manual: true, pointed: controls.stickHeld)
         case .paused:
             break
         case .gameover:

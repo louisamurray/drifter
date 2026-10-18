@@ -63,64 +63,54 @@ final class ScoringTests: XCTestCase {
 final class ControlsTests: XCTestCase {
     let pad = Config.input.pad
 
-    func testOneThumbZonesAreTheHalves() {
-        XCTAssertEqual(zoneAt(x: 10, y: 10, width: 400, height: 800, scheme: .thumb, pad: pad), .left)
-        XCTAssertEqual(zoneAt(x: 390, y: 790, width: 400, height: 800, scheme: .thumb, pad: pad), .right)
-    }
-
-    func testPedalZonesSitInTheBottomBand() {
-        XCTAssertNil(zoneAt(x: 10, y: 10, width: 400, height: 800, scheme: .pedals, pad: pad))
-        XCTAssertEqual(zoneAt(x: 30, y: 790, width: 400, height: 800, scheme: .pedals, pad: pad), .gas)
-        XCTAssertEqual(zoneAt(x: 150, y: 790, width: 400, height: 800, scheme: .pedals, pad: pad), .brake)
-        XCTAssertEqual(zoneAt(x: 350, y: 790, width: 400, height: 800, scheme: .pedals, pad: pad), .stick)
-    }
-
-    func testOneThumbSteersAndBrakesOnBoth() {
-        let left = resolveControls(heldInOrder: [.left], scheme: .thumb)
-        XCTAssertEqual(left.steer, 1)
-        XCTAssertEqual(left.throttle, 1)
-        let both = resolveControls(heldInOrder: [.right, .left], scheme: .thumb)
-        XCTAssertEqual(both.steer, -1, "steer stays with the first side")
-        XCTAssertTrue(both.handbrake)
-        XCTAssertEqual(both.throttle, 0)
+    func testZonesSitInTheBottomBand() {
+        XCTAssertNil(zoneAt(x: 10, y: 10, width: 400, height: 800, pad: pad))
+        XCTAssertEqual(zoneAt(x: 30, y: 790, width: 400, height: 800, pad: pad), .gas)
+        XCTAssertEqual(zoneAt(x: 150, y: 790, width: 400, height: 800, pad: pad), .brake)
+        XCTAssertEqual(zoneAt(x: 350, y: 790, width: 400, height: 800, pad: pad), .stick)
     }
 
     func testStickSteersTowardsItsHeading() {
-        let r = resolveControls(heldInOrder: [.gas, .stick], scheme: .pedals, stick: .pi / 2 + 0.3, heading: .pi / 2, fullAngle: 0.6)
-        XCTAssertTrue(r.analog)
+        let r = resolveControls(held: [.gas, .stick], stick: .pi / 2 + 0.3, heading: .pi / 2, fullAngle: 0.6)
         XCTAssertEqual(r.steer, 0.5, accuracy: 1e-9)
         XCTAssertEqual(r.throttle, 1)
+        XCTAssertFalse(r.handbrake)
+        XCTAssertEqual(resolveControls(held: [.brake], stick: nil, heading: 0, fullAngle: 0.6).steer, 0)
         XCTAssertNil(stickHeading(dx: 1, dy: 1, radius: 70))
         XCTAssertEqual(stickHeading(dx: 0, dy: 50, radius: 70) ?? 0, .pi / 2, accuracy: 1e-9)
     }
 
-    func testSteerRampHasTwoStagesAndAQuickRelease() {
-        let ramp = Config.input.steer
-        var s = 0.0
-        for _ in 0..<18 { s = rampSteer(current: s, target: 1, dt: 1 / 60, ramp: ramp) }
-        XCTAssertEqual(s, 0.5, accuracy: 0.02)
-        for _ in 0..<30 { s = rampSteer(current: s, target: 1, dt: 1 / 60, ramp: ramp) }
-        XCTAssertEqual(s, 1, accuracy: 1e-9)
-        for _ in 0..<6 { s = rampSteer(current: s, target: 0, dt: 1 / 60, ramp: ramp) }
-        XCTAssertEqual(s, 0, accuracy: 1e-9)
+    func testThrottleEasesInAndLetsGoAtOnce() {
+        var s = InputState()
+        advanceControls(&s, raw: RawControls(steer: 0, handbrake: false, throttle: 1), dt: 0.05, throttleSeconds: 0.15)
+        XCTAssertEqual(s.throttle, 1.0 / 3.0, accuracy: 1e-9)
+        advanceControls(&s, raw: RawControls(steer: 0, handbrake: false, throttle: 0), dt: 0.05, throttleSeconds: 0.15)
+        XCTAssertEqual(s.throttle, 0)
     }
 
-    func testTouchControlsTrackPressOrder() {
+    func testTouchControlsMapThumbsToPedalsAndStick() {
         let c = TouchControls()
-        c.scheme = .thumb
         c.screenWidth = 400
         c.screenHeight = 800
+        c.carHeading = .pi / 2
         let first = NSObject(), second = NSObject()
         let a = ObjectIdentifier(first), b = ObjectIdentifier(second)
-        c.began(id: a, x: 300, y: 400)
-        c.sample(dt: 1 / 60)
-        XCTAssertTrue(c.held[.right] ?? false)
-        c.began(id: b, x: 50, y: 400)
+        c.began(id: a, x: 40, y: 760)
+        c.sample(dt: 1)
+        XCTAssertTrue(c.held[.gas] ?? false)
+        XCTAssertEqual(c.state.throttle, 1)
+        // A thumb up and left of the stick centre asks for a heading left of straight up
+        let centre = c.stickCentre
+        c.began(id: b, x: centre.x - 40, y: centre.y - 40)
         let s = c.sample(dt: 1 / 60)
-        XCTAssertTrue(s.handbrake)
+        XCTAssertTrue(c.stickHeld)
+        XCTAssertGreaterThan(s.steer, 0)
+        XCTAssertLessThan(c.stickX, 0)
+        XCTAssertGreaterThan(c.stickY, 0)
         c.ended(id: a)
         c.ended(id: b)
         c.reset()
         XCTAssertEqual(c.state.steer, 0)
+        XCTAssertFalse(c.stickHeld)
     }
 }
