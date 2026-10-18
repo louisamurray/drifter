@@ -6,6 +6,8 @@ Deployed to GitHub Pages on every push to `main`: https://louisamurray.github.io
 
 See [docs/PLAN.md](docs/PLAN.md) for the design and build plan.
 
+There is also a native iOS app under [`ios/`](ios/README.md): fully offline, with a rigid-body car on Pacejka tyres in place of the arcade slide model. Open `ios/Drifter.xcodeproj` in Xcode 16 to build it.
+
 ## Playing
 
 Two control schemes, chosen on the title screen and remembered. Both schemes also run on a keyboard for development.
@@ -80,6 +82,7 @@ src/
   debug/       the ?debug tuning panel
   storage.ts   best scores and remembered settings in localStorage
 public/        web manifest and icons
+ios/           the native iOS app (Swift, SpriteKit, SwiftUI); see ios/README.md
 ```
 
 ## Stack
