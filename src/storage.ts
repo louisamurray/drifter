@@ -1,3 +1,4 @@
+import { isControlScheme, type ControlScheme } from './core/input';
 import { isGameMode, type GameMode } from './core/mode';
 
 const MODE_KEY = 'drifter.mode';
@@ -37,6 +38,26 @@ export function loadMode(): GameMode {
 export function saveMode(mode: GameMode): void {
   try {
     localStorage.setItem(MODE_KEY, mode);
+  } catch {
+    // As above: the choice simply does not persist.
+  }
+}
+
+const CONTROLS_KEY = 'drifter.controls';
+
+/** The control scheme the player last chose. Two thumbs unless they picked one. */
+export function loadScheme(): ControlScheme {
+  try {
+    const v = localStorage.getItem(CONTROLS_KEY);
+    return isControlScheme(v) ? v : 'pedals';
+  } catch {
+    return 'pedals';
+  }
+}
+
+export function saveScheme(scheme: ControlScheme): void {
+  try {
+    localStorage.setItem(CONTROLS_KEY, scheme);
   } catch {
     // As above: the choice simply does not persist.
   }

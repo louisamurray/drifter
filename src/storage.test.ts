@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { loadBest, loadMode, saveBest, saveMode } from './storage';
+import { loadBest, loadMode, loadScheme, saveBest, saveMode, saveScheme } from './storage';
 
 beforeEach(() => {
   localStorage.clear();
@@ -30,5 +30,18 @@ describe('mode storage', () => {
   it('round-trips', () => {
     saveMode('free');
     expect(loadMode()).toBe('free');
+  });
+});
+
+describe('control scheme storage', () => {
+  it('defaults to two thumbs and ignores junk', () => {
+    expect(loadScheme()).toBe('pedals');
+    localStorage.setItem('drifter.controls', 'feet');
+    expect(loadScheme()).toBe('pedals');
+  });
+
+  it('round-trips', () => {
+    saveScheme('thumb');
+    expect(loadScheme()).toBe('thumb');
   });
 });

@@ -1,3 +1,4 @@
+import { isControlScheme, ZONES, type ControlScheme, type Zone } from '../core/input';
 import { isGameMode, type GameMode } from '../core/mode';
 import type { GameState } from '../core/state';
 
@@ -19,14 +20,16 @@ export class Hud {
   private readonly ringLength: number;
   private readonly zonesEl: HTMLElement;
   private readonly vignetteEl: HTMLElement;
-  private readonly zoneLeft: HTMLElement;
-  private readonly zoneRight: HTMLElement;
+  private zoneEls = new Map<Zone, HTMLElement>();
 
   // Title / game over
   private readonly titleBestEl: HTMLElement;
-  private readonly installEl: HTMLElement;
   private readonly titleSubEl: HTMLElement;
+  private readonly titleTagEl: HTMLElement;
+  private readonly hintEl: HTMLElement;
+  private readonly installEl: HTMLElement;
   private readonly modeChips: HTMLElement[];
+  private readonly controlsChips: HTMLElement[];
   private readonly finalScoreEl: HTMLElement;
   private readonly finalBestEl: HTMLElement;
   private readonly newBestEl: HTMLElement;
@@ -34,14 +37,17 @@ export class Hud {
   private readonly overTopEl: HTMLElement;
   private readonly overActionsEl: HTMLElement;
   private readonly shareBtn: HTMLButtonElement;
+  private mode: GameMode = 'track';
+  private scheme: ControlScheme = 'thumb';
 
   onStart: (() => void) | null = null;
-  onMode: ((mode: GameMode) => void) | null = null;
   onRestart: (() => void) | null = null;
   onResume: (() => void) | null = null;
   onShare: (() => void) | null = null;
   onPause: (() => void) | null = null;
   onSound: (() => void) | null = null;
+  onMode: ((mode: GameMode) => void) | null = null;
+  onControls: ((scheme: ControlScheme) => void) | null = null;
   private readonly soundButtons: HTMLElement[] = [];
 
   constructor(parent: HTMLElement) {
@@ -62,12 +68,13 @@ export class Hud {
       </div>
       <div class="title-scrim"></div>
       <div class="title-foot">
-        <div class="hint">
-          <div class="hint-thumb hint-left"><span>hold</span></div>
-          <div class="hint-thumb hint-right"><span>hold</span></div>
+        <div class="controls-toggle" role="group" aria-label="Controls">
+          <button class="chip controls-chip" data-act="controls" data-scheme="thumb">One thumb</button>
+          <button class="chip controls-chip" data-act="controls" data-scheme="pedals">Two thumbs</button>
         </div>
+        <div class="hint"></div>
         <div class="title-cta">Tap to drive</div>
-        <div class="title-sub">Hold a side to steer, both for handbrake</div>
+        <div class="title-sub"></div>
         <div class="title-best"></div>
         <div class="title-install">Add to Home Screen to play full screen</div>
       </div>`;
@@ -77,9 +84,12 @@ export class Hud {
     });
     this.soundButtons.push(must(title.querySelector('.sound-toggle')));
     this.titleBestEl = must(title.querySelector('.title-best'));
-    this.installEl = must(title.querySelector('.title-install'));
     this.titleSubEl = must(title.querySelector('.title-sub'));
+    this.titleTagEl = must(title.querySelector('.title-tag'));
+    this.hintEl = must(title.querySelector('.hint'));
+    this.installEl = must(title.querySelector('.title-install'));
     this.modeChips = [...title.querySelectorAll<HTMLElement>('.mode-chip')];
+    this.controlsChips = [...title.querySelectorAll<HTMLElement>('.controls-chip')];
     this.screens.set('title', title);
 
     // Countdown
@@ -92,7 +102,7 @@ export class Hud {
     const playing = el('div', 'screen screen-playing');
     playing.innerHTML = `
       <div class="vignette"></div>
-      <div class="zones"><div class="zone zone-left"></div><div class="zone zone-right"></div></div>
+      <div class="zones"></div>
       <div class="hud-timebar"></div>
       <div class="hud-score"><span class="label">score</span><span class="value">0</span></div>
       <div class="hud-timer">60.0</div>
@@ -115,8 +125,6 @@ export class Hud {
     this.ringEl.style.strokeDasharray = String(this.ringLength);
     this.zonesEl = must(playing.querySelector('.zones'));
     this.vignetteEl = must(playing.querySelector('.vignette'));
-    this.zoneLeft = must(playing.querySelector('.zone-left'));
-    this.zoneRight = must(playing.querySelector('.zone-right'));
     playing.addEventListener('click', (e) => {
       this.dispatch(e);
     });
@@ -162,6 +170,7 @@ export class Hud {
     this.screens.set('gameover', over);
 
     for (const s of this.screens.values()) this.root.append(s);
+    this.setControls(this.scheme);
   }
 
   /** Route a click to its action. Returns true if a button handled it. */
@@ -177,6 +186,9 @@ export class Hud {
     else if (act === 'mode') {
       const mode = target.closest<HTMLElement>('[data-mode]')?.dataset.mode;
       if (isGameMode(mode)) this.onMode?.(mode);
+    } else if (act === 'controls') {
+      const scheme = target.closest<HTMLElement>('[data-scheme]')?.dataset.scheme;
+      if (isControlScheme(scheme)) this.onControls?.(scheme);
     } else return false;
     return true;
   }
@@ -188,13 +200,51 @@ export class Hud {
     }
   }
 
-  /** Highlights the chosen mode and says what the player is in for. */
+  /** Highlights the chosen course and says what the player is in for. */
   setMode(mode: GameMode): void {
+    this.mode = mode;
     for (const chip of this.modeChips) chip.classList.toggle('on', chip.dataset.mode === mode);
-    this.titleSubEl.textContent =
-      mode === 'track'
+    this.refreshTitleText();
+  }
+
+  /**
+   * Highlights the chosen control scheme and rebuilds the cues that teach it:
+   * the hint thumbs on the title and the hold zones during play.
+   */
+  setControls(scheme: ControlScheme): void {
+    this.scheme = scheme;
+    for (const chip of this.controlsChips) {
+      chip.classList.toggle('on', chip.dataset.scheme === scheme);
+    }
+    const zones = ZONES[scheme];
+    this.hintEl.classList.toggle('pedals', scheme === 'pedals');
+    this.hintEl.replaceChildren(
+      ...zones.map((z) => {
+        const thumb = el('div', `hint-thumb hint-${z}`);
+        thumb.append(el('span', ''));
+        must(thumb.firstElementChild).textContent = HINT_LABEL[scheme][z];
+        return thumb;
+      }),
+    );
+    this.zoneEls = new Map(
+      zones.map((z) => {
+        const zone = el('div', `zone zone-${z}`);
+        zone.textContent = ZONE_LABEL[scheme][z];
+        return [z, zone];
+      }),
+    );
+    this.zonesEl.replaceChildren(...this.zoneEls.values());
+    this.refreshTitleText();
+  }
+
+  private refreshTitleText(): void {
+    const where = this.mode === 'free' ? 'An open lot and nothing to follow. ' : '';
+    const how =
+      this.scheme === 'thumb'
         ? 'Hold a side to steer, both for handbrake'
-        : 'An open lot and nothing to follow. Hold a side to steer, both for handbrake';
+        : 'Left thumb steers, right thumb holds the gas or pulls the handbrake';
+    this.titleSubEl.textContent = where + how;
+    this.titleTagEl.textContent = `${this.scheme === 'thumb' ? 'One thumb' : 'Two thumbs'}. Sixty seconds.`;
   }
 
   show(state: GameState): void {
@@ -254,11 +304,10 @@ export class Hud {
     this.vignetteEl.classList.toggle('show', off);
   }
 
-  /** Faint left/right cues for new players, up to their first lap; `show` fades them in and out. */
-  setZones(show: boolean, left: boolean, right: boolean): void {
+  /** Faint column cues for new players, up to their first lap; `show` fades them in and out. */
+  setZones(show: boolean, held: Readonly<Record<Zone, boolean>>): void {
     this.zonesEl.classList.toggle('show', show);
-    this.zoneLeft.classList.toggle('held', left);
-    this.zoneRight.classList.toggle('held', right);
+    for (const [zone, zoneEl] of this.zoneEls) zoneEl.classList.toggle('held', held[zone]);
   }
 
   /** Screen band between the game-over score and its buttons, where the track overview fits. */
@@ -278,6 +327,16 @@ export class Hud {
     if (target) restartAnimation(target, 'punch');
   }
 }
+
+const HINT_LABEL: Record<ControlScheme, Record<Zone, string>> = {
+  thumb: { left: 'hold', right: 'hold', brake: '', gas: '' },
+  pedals: { left: '◀', right: '▶', brake: 'brake', gas: 'gas' },
+};
+
+const ZONE_LABEL: Record<ControlScheme, Record<Zone, string>> = {
+  thumb: { left: '◀ hold', right: 'hold ▶', brake: '', gas: '' },
+  pedals: { left: '◀', right: '▶', brake: 'brake', gas: 'gas' },
+};
 
 export function fmtScore(n: number): string {
   return Math.round(n).toLocaleString('en-NZ');

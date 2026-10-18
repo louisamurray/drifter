@@ -16,6 +16,10 @@
  */
 export type ControlScheme = 'thumb' | 'pedals';
 
+export function isControlScheme(v: unknown): v is ControlScheme {
+  return v === 'thumb' || v === 'pedals';
+}
+
 /** A steering column; the only zones in the one-thumb scheme. */
 export type Side = 'left' | 'right';
 

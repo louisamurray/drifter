@@ -1,7 +1,7 @@
 import './style.css';
 import { config } from './config';
 import { CanvasSurface } from './core/canvas';
-import { TouchControls } from './core/input';
+import { TouchControls, type ControlScheme } from './core/input';
 import { GameLoop } from './core/loop';
 import type { GameMode } from './core/mode';
 import type { GameState } from './core/state';
@@ -58,7 +58,7 @@ import { haptic, hapticsDescription } from './core/haptics';
 import { fmtScore, Hud } from './render/hud';
 import { mountDebugPanel } from './debug/panel';
 import { debugState } from './debug/state';
-import { loadBest, loadMode, saveBest, saveMode } from './storage';
+import { loadBest, loadMode, loadScheme, saveBest, saveMode, saveScheme } from './storage';
 import { AudioEngine } from './audio/audio';
 
 const canvasEl = document.getElementById('game');
@@ -90,6 +90,9 @@ const grass: Surface = config.offTrack;
  */
 let mode: GameMode = loadMode();
 let start = startFor(mode);
+/** One thumb with automatic throttle, or two thumbs with a gas column. Only the player drives manually. */
+let scheme: ControlScheme = loadScheme();
+input.scheme = scheme;
 
 function startFor(m: GameMode): { x: number; y: number; heading: number } {
   return m === 'track' ? startPose(track) : lotStartPose();
@@ -152,7 +155,7 @@ function resetRun(): void {
   newBest = false;
   everDrifted = false;
   lotGhost = createLotPilot(lot);
-  hud.setZones(false, false, false);
+  hud.setZones(false, input.held);
   hud.setOffRoad(false);
   skids.clear();
   smoke.clear();
@@ -189,6 +192,16 @@ function setState(next: GameState): void {
   }
 }
 
+/** Switch control scheme from the title screen. */
+function setScheme(next: ControlScheme): void {
+  if (next === scheme) return;
+  scheme = next;
+  saveScheme(scheme);
+  input.scheme = scheme;
+  input.reset();
+  hud.setControls(scheme);
+}
+
 /** Switch course from the title screen. Each mode keeps its own best. */
 function setMode(next: GameMode): void {
   if (next === mode) return;
@@ -203,6 +216,8 @@ function setMode(next: GameMode): void {
 
 hud.setMode(mode);
 hud.onMode = setMode;
+hud.setControls(scheme);
+hud.onControls = setScheme;
 hud.onStart = () => {
   audio.unlock();
   setState('countdown');
@@ -266,18 +281,20 @@ function captureFrame(): Promise<File | null> {
 
 // ---- Simulation -----------------------------------------------------------
 
-function stepPhysics(dt: number, ctl: InputState): void {
+/** `manual` means the player is on the gas pedal: no corner lift, and tail lights when they lift. */
+function stepPhysics(dt: number, ctl: InputState, manual = false): void {
   Object.assign(prev, car);
   const p = config.physics;
   const onRoad = mode === 'track';
   const assist = onRoad ? assistYaw(car.heading, roadHeading, car.drifting, offTrack, p) : 0;
   const forward = telemetry(car).forwardSpeed;
-  const lift = onRoad
-    ? cornerLift(forward, minRadiusAhead(track, trackIndex, liftLookahead(forward, p)), p)
-    : 0;
+  const lift =
+    onRoad && !manual
+      ? cornerLift(forward, minRadiusAhead(track, trackIndex, liftLookahead(forward, p)), p)
+      : 0;
   stepCar(car, ctl, dt, p, offTrack ? grass : ROAD, assist, lift);
   carLook.steer = ctl.steer;
-  carLook.brake = ctl.handbrake ? 1 : lift;
+  carLook.brake = ctl.handbrake ? 1 : Math.max(lift, manual && ctl.throttle < 0.5 ? 0.6 : 0);
   const lapsBefore = laps.laps;
   if (onRoad) {
     const q = nearestOnTrack(track, car.x, car.y);
@@ -402,13 +419,14 @@ function update(dt: number): void {
       break;
     }
     case 'playing': {
+      const manual = !debugState.autopilot && scheme === 'pedals';
       const ctl = debugState.autopilot
         ? ghostInput(dt, debugState.aggression)
-        : input.sample(dt, config.input.steer);
-      stepPhysics(dt, ctl);
+        : input.sample(dt, config.input.steer, config.input.throttleSeconds);
+      stepPhysics(dt, ctl, manual);
       // Hold cues stay up for a new player until their first lap, or first banked chain on the lot
       const learning = best === 0 && (mode === 'track' ? laps.laps === 0 : score.score === 0);
-      hud.setZones(learning, input.held.left, input.held.right);
+      hud.setZones(learning, input.held);
       hud.setOffRoad(offTrack);
       break;
     }
@@ -501,7 +519,7 @@ function render(alpha: number): void {
       input.state.steer,
       input.state.throttle,
       safeAreaTop() + 70,
-      `${mode}  ${audio.describe()}  haptics: ${hapticsDescription()}`,
+      `${mode} ${scheme}  ${audio.describe()}  haptics: ${hapticsDescription()}`,
     );
   }
 }
