@@ -168,3 +168,39 @@ it.each(['legacy', 'force'] as const)(
     expect(reduced.canSaveBest).toBe(false);
   },
 );
+
+describe('control feedback for tyre and engine cues', () => {
+  it('reports grip use as axle force over available grip, low on a cruise and high in a slide', () => {
+    const h = new Handling('force', pose);
+    for (let i = 0; i < 240; i++) h.step({ ...gas, throttle: 0.35 }, dt, raw);
+    const cruising = h.feedback().utilisation;
+    let peak = 0;
+    for (let i = 0; i < 90; i++) {
+      h.step({ throttle: 1, steer: 1, handbrake: i < 12 }, dt, raw);
+      const { utilisation } = h.feedback();
+      expect(utilisation).toBeGreaterThanOrEqual(0);
+      expect(utilisation).toBeLessThanOrEqual(1);
+      peak = Math.max(peak, utilisation);
+    }
+    expect(cruising).toBeLessThan(0.1);
+    expect(peak).toBeGreaterThan(0.8);
+  });
+
+  it('flags approximate wheelspin only while drive exceeds rear grip', () => {
+    const h = new Handling('force', pose);
+    // A standing full-throttle launch, before load transfer adds rear grip.
+    h.step(gas, dt, raw);
+    expect(h.feedback().wheelspin).toBeGreaterThan(0);
+    expect(h.feedback().wheelspin).toBeLessThanOrEqual(1);
+    for (let i = 0; i < 30; i++) h.step({ ...gas, throttle: 0 }, dt, raw);
+    expect(h.feedback().wheelspin).toBe(0);
+    h.step({ ...gas, handbrake: true }, dt, raw);
+    expect(h.feedback().wheelspin).toBe(0);
+  });
+
+  it('gives legacy handling no wheelspin signal', () => {
+    const h = new Handling('legacy', pose);
+    for (let i = 0; i < 60; i++) h.step(gas, dt, raw);
+    expect(h.feedback().wheelspin).toBe(0);
+  });
+});
