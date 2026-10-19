@@ -1,7 +1,7 @@
 # Drifter: handling and engagement development plan
 
 Date: 19 October 2026  
-Status: Phase 0 engineering baseline and T2 isolated solver complete; initial D1 studies created. Human validation, T3 gameplay integration and T4 untimed practice remain pending. The requested car park enlargement is implemented.
+Status: Phase 0 engineering baseline, T2 isolated solver and T3 development integration complete locally; initial D1 studies created. Human validation and T4 untimed practice remain pending. The requested car park enlargement is implemented.
 
 Repository inspected: `dedc31f`.  
 Input: [drift physics and engagement research](2026-10-19-drift-physics-and-engagement-research.md).  
@@ -142,6 +142,8 @@ Status: implemented in `871d6a9`; see [T2 solver evidence](2026-10-19-force-solv
 - Begin at a matching fixed timestep for cross-platform fixtures. Compare 60 Hz and smaller steps before choosing any production substep count.
 
 **T3 — Integrate the vehicle and diagnostics** · Engineering · Depends on: T2
+
+Status: implemented locally; see [T3 integration evidence](2026-10-19-vehicle-integration-t3.md). Legacy remains the default; force selection is development-only and cannot save competitive bests. Device performance and handling acceptance remain pending.
 
 - Add the unit/coordinate adapter and a development-only model switch that resets the session.
 - Integrate surfaces, applied steering visuals, rubber, smoke, speed audio and camera using the telemetry contract. Expose model, input and assist diagnostics in the existing debug tooling.
