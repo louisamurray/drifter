@@ -223,6 +223,12 @@ it('runs the actual session through development model changes, pause, restart an
     'Line 0 + Angle 0 + Transition 0',
   );
   expect(document.querySelector('.over-best')?.textContent).toContain('No best saved');
+  expect(document.querySelector('.result-reason')?.textContent).toBe(
+    'Finish not reached. Retry from the start.',
+  );
+  expect(document.querySelector('.result-identity')?.textContent).toContain(
+    's-bend-2 · force-1 / precision-2',
+  );
   expect(harness.saveBest).toHaveBeenCalledTimes(1);
 
   vi.unstubAllGlobals();

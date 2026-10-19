@@ -2,9 +2,11 @@ import { createSession, type Activity, type LessonId } from './game/session';
 import { lessonEight, createLesson, updateLesson, LESSONS, type Observation } from './game/lessons';
 import {
   CHALLENGE_REVISION,
+  CHALLENGE_SCORING,
   CHALLENGE_GATES,
   CHALLENGE_SPAWN,
   createChallenge,
+  endChallenge,
   updateChallenge,
   challengeTotal,
   pathPoint,
@@ -20,7 +22,7 @@ import type { GameMode } from './core/mode';
 import type { GameState } from './core/state';
 import { autopilot } from './game/autopilot';
 import { assistYaw, cornerLift, liftLookahead, type CarState } from './game/car';
-import { Handling, type HandlingModel } from './game/handling';
+import { FORCE_PHYSICS, Handling, type HandlingModel } from './game/handling';
 import type { InputState } from './core/input';
 import { createLapState, updateLaps } from './game/laps';
 import { createLotPilot, insideLot, lotBounds, lotStartPose } from './game/lot';
@@ -256,7 +258,7 @@ function setState(next: GameState): void {
         challenge,
         previousBest,
         saved,
-        `${assistance === 'assisted' ? 'Assisted' : 'Reduced assistance'} · ${identity.controls} · ${CHALLENGE_REVISION} · force-1 / precision-1`,
+        `${assistance === 'assisted' ? 'Assisted' : 'Reduced assistance'} · ${identity.controls} · ${identity.course} · ${identity.physics} / ${identity.scoring}`,
       );
       return;
     }
@@ -298,8 +300,8 @@ function setMode(next: GameMode): void {
 
 function challengeIdentity(): RecordIdentity {
   return {
-    physics: 'force-1',
-    scoring: 'precision-1',
+    physics: FORCE_PHYSICS,
+    scoring: CHALLENGE_SCORING,
     course: CHALLENGE_REVISION,
     assistance,
     controls: [...sources].sort().join('+') || `${input.source}-${scheme}`,
@@ -372,7 +374,9 @@ hud.onReset = () => {
 };
 input.onResetKey = () => hud.onReset?.();
 hud.onExit = () => {
-  if (state === 'paused' && session.activity !== 'timed') setState('gameover');
+  if (state !== 'paused' || session.activity === 'timed') return;
+  if (session.activity === 'challenge') endChallenge(challenge);
+  setState('gameover');
 };
 hud.onTitle = () => {
   setState('title');

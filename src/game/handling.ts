@@ -14,6 +14,8 @@ import {
 
 /** The sole SI ↔ web-world boundary. Web angles and lateral speeds are clockwise/right-positive. */
 export const WORLD_UNITS_PER_METRE = 10;
+/** Force solver, tuning and substep integration. Change it whenever any of them changes. */
+export const FORCE_PHYSICS = 'force-1';
 export type HandlingModel = 'legacy' | 'force';
 export type Pose = Pick<CarState, 'x' | 'y' | 'heading'>;
 

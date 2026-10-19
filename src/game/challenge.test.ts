@@ -5,9 +5,11 @@ import {
   CHALLENGE_GATES,
   CHALLENGE_REVISION,
   CHALLENGE_RULES,
+  CHALLENGE_SCORING,
   CHALLENGE_SPAWN,
   challengeTotal,
   createChallenge,
+  endChallenge,
   pathPoint,
   updateChallenge,
 } from './challenge';
@@ -79,6 +81,76 @@ describe('course geometry', () => {
       revision: 's-bend-2',
       hash: 1151966221,
     });
+  });
+});
+/** Follows the line with a slip chosen per point; stops after `until` if given. */
+function along(slip: (t: number) => number, until = 1.01) {
+  const s = createChallenge();
+  for (let i = -10; i <= until * 1000; i++) {
+    const t = i / 1000;
+    const p = pathPoint(t);
+    const prev = pathPoint(t - 0.001);
+    updateChallenge(
+      s,
+      {
+        ...p,
+        speed: Math.hypot(p.x - prev.x, p.y - prev.y) * 60,
+        forwardSpeed: 100,
+        slipAngle: slip(t),
+        yawRate: 0.8,
+        offTrack: false,
+      },
+      1 / 60,
+    );
+  }
+  return s;
+}
+const clean = (t: number) => (t < 0.5 ? 0.5 : -0.5);
+function reconcile(s: ReturnType<typeof createChallenge>) {
+  const sum = (category?: string) =>
+    s.events.filter((e) => !category || e.category === category).reduce((a, e) => a + e.points, 0);
+  expect(sum()).toBe(challengeTotal(s));
+  expect(sum('line')).toBe(s.line);
+  expect(sum('angle')).toBe(s.angle);
+  expect(sum('transition')).toBe(s.transition);
+}
+describe('score events', () => {
+  it('records every score change as an ordered event that reconciles with the total', () => {
+    const s = along(clean);
+    expect(s.events.map((e) => e.label)).toEqual([
+      'Outer 1',
+      'Clip 1',
+      'Corner 1 angle',
+      'Transition',
+      'Outer 2',
+      'Clip 2',
+      'Corner 2 angle',
+    ]);
+    expect(s.events.every((e, i) => i === 0 || e.at >= (s.events[i - 1]?.at ?? 0))).toBe(true);
+    reconcile(s);
+  });
+  it('revokes a corner with explicit negative events when the car spins in it', () => {
+    const s = along((t) => (t < 0.4 ? 0.5 : t < 0.45 ? 1.8 : clean(t)));
+    const lost = s.events.filter((e) => e.points < 0);
+    expect(lost.map((e) => [e.label, e.points])).toEqual([['Corner 1 lost', -1000]]);
+    expect(s.reason).toBe('Spun in corner 1. Countersteer sooner.');
+    expect(s.transition).toBe(0);
+    reconcile(s);
+  });
+  it('explains and settles an attempt ended before the finish', () => {
+    const s = along(clean, 0.3);
+    expect(s.finished).toBe(false);
+    endChallenge(s);
+    expect(s.finished).toBe(true);
+    expect(s.reason).toBe('Finish not reached. Retry from the start.');
+    expect(s.events.map((e) => e.label)).toEqual(['Outer 1', 'Clip 1', 'Corner 1 angle']);
+    reconcile(s);
+    const settled = structuredClone(s);
+    endChallenge(s);
+    expect(s).toEqual(settled);
+  });
+  it('names the scoring rules that produce the events', () => {
+    expect(CHALLENGE_SCORING).toBe('precision-2');
   });
 });
 describe('frozen precision rules', () => {

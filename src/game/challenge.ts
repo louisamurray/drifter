@@ -2,6 +2,8 @@ import type { Observation } from './lessons';
 
 /** Frozen candidate rules. Change this revision whenever geometry or scoring changes. */
 export const CHALLENGE_REVISION = 's-bend-2';
+/** Scoring and event accounting. Change it whenever an award, revocation or rounding rule changes. */
+export const CHALLENGE_SCORING = 'precision-2';
 export const CHALLENGE_RULES = {
   minSpeed: 70,
   minSlip: 0.2,
@@ -27,6 +29,14 @@ export const CHALLENGE_GATES = times.map((t, i) => {
 });
 export const CHALLENGE_SPAWN = { x: -150, y: 1120, heading: Math.atan2(-2000, 800 * Math.PI) };
 export type ZoneState = 'upcoming' | 'complete' | 'missed';
+/** One change to the total. Revocations are negative, so the events always sum to the total. */
+export interface ChallengeEvent {
+  /** Seconds since Start. */
+  at: number;
+  category: 'line' | 'angle' | 'transition';
+  label: string;
+  points: number;
+}
 export interface ChallengeState {
   next: number;
   started: boolean;
@@ -39,11 +49,14 @@ export interface ChallengeState {
   reason: string;
   previous: Observation | null;
   progress: number;
+  /** Angle quality earned in each corner, committed as one event when the corner closes. */
   cornerAngle: number[];
   cornerLine: number[];
+  angleCommitted: number[];
   invalid: boolean[];
   leftSlide: boolean;
   rightHold: number;
+  events: ChallengeEvent[];
 }
 export function createChallenge(): ChallengeState {
   return {
@@ -60,9 +73,11 @@ export function createChallenge(): ChallengeState {
     progress: 0,
     cornerAngle: [0, 0],
     cornerLine: [0, 0],
+    angleCommitted: [-1, -1],
     invalid: [false, false],
     leftSlide: false,
     rightHold: 0,
+    events: [],
   };
 }
 export function challengeTotal(s: ChallengeState): number {
@@ -71,11 +86,48 @@ export function challengeTotal(s: ChallengeState): number {
 function loss(s: ChallengeState, text: string): void {
   if (!s.reason) s.reason = text;
 }
+function award(
+  s: ChallengeState,
+  category: ChallengeEvent['category'],
+  label: string,
+  points: number,
+): void {
+  if (points === 0) return;
+  s.events.push({ at: s.elapsed, category, label, points });
+  s[category] += points;
+}
+/** Close a corner once: its earned angle becomes one rounded event, unless it was lost. */
+function commitAngle(s: ChallengeState, corner: number): void {
+  if ((s.angleCommitted[corner] ?? 0) >= 0) return;
+  const points = s.invalid[corner] ? 0 : Math.round(s.cornerAngle[corner] ?? 0);
+  s.angleCommitted[corner] = points;
+  award(s, 'angle', `Corner ${String(corner + 1)} angle`, points);
+}
+/** The first spin or run-wide in a corner revokes what that corner and the link had earned. */
+function invalidate(s: ChallengeState, corner: number): void {
+  if (s.invalid[corner]) return;
+  s.invalid[corner] = true;
+  const label = `Corner ${String(corner + 1)} lost`;
+  award(s, 'line', label, -(s.cornerLine[corner] ?? 0));
+  award(s, 'angle', label, -Math.max(0, s.angleCommitted[corner] ?? 0));
+  award(s, 'transition', 'Transition lost', -s.transition);
+  s.cornerLine[corner] = 0;
+  s.cornerAngle[corner] = 0;
+}
+function finish(s: ChallengeState, reason?: string): void {
+  if (reason) loss(s, reason);
+  commitAngle(s, 0);
+  commitAngle(s, 1);
+  s.finished = true;
+}
+/** End an attempt early, for example from the pause menu. Settled attempts are unchanged. */
+export function endChallenge(s: ChallengeState): void {
+  if (!s.finished) finish(s, 'Finish not reached. Retry from the start.');
+}
 export function updateChallenge(s: ChallengeState, o: Observation, dt: number): void {
   if (s.finished || dt <= 0 || dt > 0.1 || !Number.isFinite(dt)) return;
   if (!Object.values(o).every((v) => typeof v === 'boolean' || Number.isFinite(v))) {
-    s.finished = true;
-    loss(s, 'Invalid motion. Reset to try again.');
+    finish(s, 'Invalid motion. Reset to try again.');
     return;
   }
   const prev = s.previous;
@@ -83,15 +135,13 @@ export function updateChallenge(s: ChallengeState, o: Observation, dt: number): 
   if (!prev) return;
   const distance = Math.hypot(o.x - prev.x, o.y - prev.y);
   if (distance > Math.max(prev.speed, o.speed) * dt * 2 + 5) {
-    s.finished = true;
-    loss(s, 'Course skipped. Follow the targets in order.');
+    finish(s, 'Course skipped. Follow the targets in order.');
     return;
   }
   if (s.started) {
     s.elapsed += dt;
     if (s.elapsed >= CHALLENGE_RULES.seconds) {
-      s.finished = true;
-      loss(s, 'Time limit reached. Carry more forward speed.');
+      finish(s, 'Time limit reached. Carry more forward speed.');
       return;
     }
   }
@@ -116,11 +166,8 @@ export function updateChallenge(s: ChallengeState, o: Observation, dt: number): 
       Math.abs(o.slipAngle) > CHALLENGE_RULES.maxSlip ||
       Math.abs(o.yawRate) >= CHALLENGE_RULES.maxYaw)
   ) {
-    s.invalid[corner] = true;
-    s.cornerAngle[corner] = 0;
-    s.cornerLine[corner] = 0;
+    invalidate(s, corner);
     if (corner === 0) s.leftSlide = false;
-    s.transition = 0;
     loss(
       s,
       o.offTrack
@@ -140,7 +187,8 @@ export function updateChallenge(s: ChallengeState, o: Observation, dt: number): 
     if (corner === 0 && t > 0.2 && t < 0.5) s.leftSlide = true;
     if (corner === 1 && t < 0.7 && s.leftSlide && !s.invalid[0]) {
       s.rightHold += dt;
-      if (s.rightHold >= 0.25) s.transition = CHALLENGE_RULES.transition;
+      if (s.rightHold >= 0.25 && !s.transition)
+        award(s, 'transition', 'Transition', CHALLENGE_RULES.transition);
     }
   } else if (!sliding) s.rightHold = 0;
   if (s.started) s.progress = Math.max(s.progress, t);
@@ -158,8 +206,10 @@ export function updateChallenge(s: ChallengeState, o: Observation, dt: number): 
       const scoredZone = [1, 2, 4, 5].includes(s.next);
       const valid = within && (!scoredZone || (sliding && !s.invalid[zoneCorner]));
       s.zones[s.next] = valid ? 'complete' : 'missed';
-      if (scoredZone && valid)
+      if (scoredZone && valid) {
         s.cornerLine[zoneCorner] = (s.cornerLine[zoneCorner] ?? 0) + CHALLENGE_RULES.linePerZone;
+        award(s, 'line', gate.label, CHALLENGE_RULES.linePerZone);
+      }
       if (!valid)
         loss(
           s,
@@ -167,13 +217,14 @@ export function updateChallenge(s: ChallengeState, o: Observation, dt: number): 
         );
       s.started = true;
       s.next += 1;
-      if (s.next === CHALLENGE_GATES.length) {
-        s.finished = true;
-        if (!s.transition)
-          loss(s, 'Transition not linked. Catch the left slide, then hold the right.');
-      }
+      if (s.next === 4) commitAngle(s, 0);
+      if (s.next === CHALLENGE_GATES.length)
+        finish(
+          s,
+          s.transition
+            ? undefined
+            : 'Transition not linked. Catch the left slide, then hold the right.',
+        );
     }
   }
-  s.line = s.cornerLine.reduce((a, b) => a + b, 0);
-  s.angle = Math.round(s.cornerAngle.reduce((a, b) => a + b, 0));
 }
