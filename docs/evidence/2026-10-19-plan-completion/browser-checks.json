@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-19",
+  "build": "production bundle (vite build, then vite preview) of branch feat/complete-drift-plan at c2ceed2",
+  "browser": "Brave on macOS, reporting Chrome/155.0.0.0",
+  "viewport": { "width": 1440, "height": 712, "dpr": 2, "input": "mouse and keyboard" },
+  "conditions": "Shared, loaded desktop: load average 5–6 with another project's dev server at ~60% CPU. Absolute timings are indicative only; compare rows within one round.",
+  "method": "?debug wraps the loop's update (one 60 Hz step) and render callbacks with performance.now() (100 µs resolution) and keeps the last 240 samples. Debug autopilot drove every timed and practice session. Practice uses force handling; Circuit and Free drift use legacy handling.",
+  "frameCost": {
+    "columns": [
+      "session",
+      "update mean",
+      "update p95",
+      "update max",
+      "render mean",
+      "render p95",
+      "render max"
+    ],
+    "units": "milliseconds",
+    "title": [["Title, legacy circuit ghost", 0.34, 0.7, 6.7, 0.91, 1.7, 8.8]],
+    "round0": [
+      ["Free drift, legacy, 8 s", 0.33, 0.5, 1.2, 0.49, 0.8, 0.9],
+      ["Practice, force, 8 s", 0.71, 1.2, 7.4, 0.65, 1.0, 1.6],
+      ["Practice, force, 16 s", 0.81, 1.2, 4.2, 0.65, 1.2, 3.4],
+      ["Circuit, legacy, 8 s", 1.18, 2.3, 9.7, 1.33, 2.5, 6.3]
+    ],
+    "round1": [
+      ["Free drift, legacy, 8 s", 1.9, 3.6, 22.9, 1.61, 2.6, 25.3],
+      ["Free drift, legacy, 16 s", 1.91, 3.7, 17.1, 1.81, 3.4, 8.0],
+      ["Practice, force, 8 s", 1.82, 2.9, 16.0, 0.78, 1.2, 3.6],
+      ["Practice, force, 16 s", 2.11, 4.8, 10.5, 1.09, 2.8, 7.7],
+      ["Circuit, legacy, 8 s", 2.36, 6.2, 23.7, 1.44, 4.2, 11.0]
+    ],
+    "earlierUnderHeavierLoad": "A first, unverified pass measured 2.9–5.4 ms mean update for both lot sessions and spikes up to 67 ms; the same no-difference pattern held.",
+    "solverOnly": "Node 26, 884 recorded challenge steps × 300: legacy 0.19 µs and force 0.55 µs per 60 Hz step, including telemetry and feedback.",
+    "heap": "Practice, force: used JS heap grew 0.23 MB over 20 s (17.4 → 17.7 MB)."
+  },
+  "bundle": {
+    "branch": {
+      "js": "86.74 kB / 29.29 kB gzip",
+      "css": "15.35 kB / 4.07 kB gzip",
+      "html": "0.43 kB gzip",
+      "font": "14.56 kB woff2"
+    },
+    "baselineDedc31f": {
+      "js": "53.87 kB / 18.57 kB gzip",
+      "css": "11.68 kB / 3.25 kB gzip",
+      "html": "0.43 kB gzip",
+      "font": "14.56 kB woff2"
+    },
+    "initialLoadGzip": "≈ 48 kB on the branch against the 150 kB budget (≈ 37 kB at dedc31f)"
+  },
+  "checks": [
+    {
+      "check": "Title ghost drives with legacy handling",
+      "result": "pass",
+      "detail": "update samples recorded on the title"
+    },
+    {
+      "check": "Circuit and Free drift timed runs start and play under autopilot",
+      "result": "pass"
+    },
+    {
+      "check": "Practice keeps running past 60 s with no timer or score",
+      "result": "pass",
+      "detail": "a practice session ran beyond 70 s; still screen-playing"
+    },
+    {
+      "check": "Window blur pauses play",
+      "result": "pass",
+      "detail": "taking a screenshot blurred the window and paused the session"
+    },
+    {
+      "check": "Pause and Finish attempt in the challenge",
+      "result": "pass",
+      "detail": "reason 'Finish not reached. Retry from the start.'; identity 'Assisted · keyboard-pedals · s-bend-2 · force-1 / precision-2'; No best saved"
+    },
+    {
+      "check": "Keyboard W drives the force car through the challenge Start gate",
+      "result": "pass",
+      "detail": "gate 1 marked Done; cue moved to 'Next: Outer 1 · slide left'; see desktop-challenge-s-bend-2.jpg"
+    },
+    {
+      "check": "Challenge course bends left first",
+      "result": "pass",
+      "detail": "desktop-challenge-s-bend-2.jpg"
+    },
+    {
+      "check": "Transition lesson shows the two-loop eight and Switch label",
+      "result": "pass",
+      "detail": "desktop-transition-eight.jpg"
+    },
+    { "check": "Sound toggle", "result": "pass", "detail": "Sound on → Sound off → Sound on" },
+    {
+      "check": "Storage writes throwing",
+      "result": "pass",
+      "detail": "assistance change, practice start and practice overview all worked with every localStorage write throwing"
+    },
+    {
+      "check": "Console errors on load and during the checks",
+      "result": "pass",
+      "detail": "none recorded"
+    }
+  ],
+  "notChecked": [
+    "Physical touch devices, safe areas, audio unlock and phone frame rate",
+    "Physical controller connect, disconnect and takeover",
+    "Native share sheet (not opened, to avoid a blocking dialog)",
+    "Window resize and small or tall viewports for the changed screens",
+    "A completed challenge or lesson driven by a person"
+  ],
+  "observations": [
+    "On a 712 px-tall window the challenge results panel leaves a thin band for the rubber overview; the same layout appears in the earlier 1280 × 800 evidence."
+  ]
+}
