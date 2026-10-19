@@ -1,5 +1,5 @@
 import { createSession, type Activity, type LessonId } from './game/session';
-import { lessonEight, createLesson, updateLesson, LESSONS, type Observation } from './game/lessons';
+import { lessonEight, createLesson, observe, updateLesson, LESSONS } from './game/lessons';
 import {
   CHALLENGE_REVISION,
   CHALLENGE_SCORING,
@@ -532,15 +532,7 @@ function stepPhysics(dt: number, ctl: InputState, manual = false, pointed = fals
     if (score.finished) setState('gameover');
   }
   if (state === 'playing' && session.activity !== 'timed') {
-    const observation: Observation = {
-      x: car.x,
-      y: car.y,
-      speed: t.speed,
-      forwardSpeed: t.forwardSpeed,
-      slipAngle: t.slipAngle,
-      yawRate: car.yawRate,
-      offTrack,
-    };
+    const observation = observe(car, t, offTrack);
     if (session.activity === 'lesson' && session.lesson) {
       const wasComplete = lessonState.complete;
       updateLesson(lessonState, session.lesson, observation, dt);

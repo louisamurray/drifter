@@ -1,5 +1,6 @@
 import type { LessonId } from './session';
 import type { Pose } from './handling';
+import type { CarState, CarTelemetry } from './car';
 
 export interface Observation {
   x: number;
@@ -9,6 +10,18 @@ export interface Observation {
   slipAngle: number;
   yawRate: number;
   offTrack: boolean;
+}
+/** What lessons and the challenge see of one physics step, in web-world units. */
+export function observe(car: CarState, t: CarTelemetry, offTrack: boolean): Observation {
+  return {
+    x: car.x,
+    y: car.y,
+    speed: t.speed,
+    forwardSpeed: t.forwardSpeed,
+    slipAngle: t.slipAngle,
+    yawRate: car.yawRate,
+    offTrack,
+  };
 }
 export const LESSONS = {
   initiate: {
