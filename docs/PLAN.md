@@ -287,4 +287,4 @@ The deploy workflow lints, tests and builds on every push to `main` and publishe
 - Ghost replay of best run
 - Daily seed track for shared leaderboards
 - Car colour picker
-- Gamepad support
+- Gamepad support: standard analogue mapping implemented in T5; physical-device acceptance pending (see [T5 evidence](2026-10-19-input-assistance-t5.md))

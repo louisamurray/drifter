@@ -162,6 +162,8 @@ Status: implemented locally; see [T3 integration evidence](2026-10-19-vehicle-in
 
 **T5 — Tune input response and assistance** · Engineering + design · Depends on: Gate 1
 
+Status: implemented locally; see [T5 input and assistance evidence](2026-10-19-input-assistance-t5.md). Force-prototype response tuning, analogue controller input, safe takeover/disconnect and explicit assistance profiles are covered by regression tests. Legacy timed handling remains unchanged. T4/Gate 1 and physical-device/human handling acceptance remain pending.
+
 - Tune steering reversal separately from initial turn-in and return-to-centre; compare against the existing roughly 0.8-second ramp to full lock.
 - Tune throttle rise/release for binary keys without making digital throttle pretend to be analogue. Add controller analogue input and test disconnection and takeover.
 - Tune the touch heading controller and one-thumb automatic driving separately. Keep assistance coefficients explicit and surface the selected profile.
