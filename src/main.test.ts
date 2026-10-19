@@ -211,6 +211,11 @@ it('runs the actual session through development model changes, pause, restart an
   document.querySelector<HTMLButtonElement>('.screen-paused [data-act="leave-lesson"]')?.click();
   expect(document.querySelector('.hud')?.getAttribute('data-activity')).toBe('practice');
   expect(document.querySelector('.screen-playing.active')).not.toBeNull();
+  // Reset now belongs to free practice: back to its spawn, not the lesson's.
+  key('r', 'keyup');
+  key('r');
+  tick(1);
+  expect(harness.drawCar.mock.lastCall?.slice(1, 4)).toEqual(practiceSpawn);
   key('Escape');
   document.querySelector<HTMLButtonElement>('.screen-paused [data-act="title"]')?.click();
   document.querySelector<HTMLButtonElement>('[data-activity="challenge"]')?.click();

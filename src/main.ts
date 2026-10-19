@@ -397,6 +397,7 @@ hud.onLesson = (id) => {
 hud.onLeaveLesson = () => {
   if (session.activity !== 'lesson') return;
   session = createSession('practice', 'free');
+  start = startFor(session.course);
   hud.setActivity('practice');
   input.reset();
   if (state === 'paused') setState('playing');
