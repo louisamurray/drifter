@@ -146,7 +146,8 @@ export function updateChallenge(s: ChallengeState, o: Observation, dt: number): 
     }
   }
   const t = Math.max(0, Math.min(1, (1000 - o.y) / 2000));
-  const corner = t < 0.5 ? 0 : 1;
+  // The tilted Switch gate, not height on the course, ends corner 1.
+  const corner = s.next <= 3 ? 0 : 1;
   const expected = corner === 0 ? 1 : -1;
   const controlled =
     !o.offTrack &&

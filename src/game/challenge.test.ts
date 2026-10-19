@@ -137,6 +137,29 @@ describe('score events', () => {
     expect(s.transition).toBe(0);
     reconcile(s);
   });
+  it('attributes motion to a corner by the gates passed, not by height on the course', () => {
+    // The Switch gate is tilted: crossing near its left end still leaves y above 0.
+    const s = along(clean, 0.4);
+    const step = (x: number, y: number, slipAngle: number) => {
+      updateChallenge(
+        s,
+        { x, y, speed: 150, forwardSpeed: 140, slipAngle, yawRate: 0.8, offTrack: false },
+        1 / 60,
+      );
+    };
+    const from = pathPoint(0.4);
+    const to = { x: -100, y: 125 };
+    const frames = Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / 2.5);
+    for (let i = 1; i <= frames; i++)
+      step(from.x + ((to.x - from.x) * i) / frames, from.y + ((to.y - from.y) * i) / frames, 0.5);
+    // Just past the Switch, still at y > 0, the car spins.
+    for (let i = 1; i <= 12; i++) step(to.x - i * 1.9, to.y - i * 1.5, 1.8);
+    expect(s.next).toBe(4);
+    expect(s.events.some((e) => e.label === 'Corner 1 lost')).toBe(false);
+    expect(s.line).toBe(1000);
+    expect(s.reason).toBe('Spun in corner 2. Countersteer sooner.');
+    reconcile(s);
+  });
   it('explains and settles an attempt ended before the finish', () => {
     const s = along(clean, 0.3);
     expect(s.finished).toBe(false);
