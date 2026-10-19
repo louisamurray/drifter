@@ -119,10 +119,8 @@ export class Handling {
       utilisation: Math.min(
         1,
         Math.max(
-          Math.abs(v.forceFrontY) /
-            Math.max(1, v.loadFront * STANDARD_VEHICLE.frontGrip),
-          Math.abs(v.forceRearY) /
-            Math.max(1, v.loadRear * STANDARD_VEHICLE.rearGrip),
+          Math.abs(v.forceFrontY) / Math.max(1, v.loadFront * STANDARD_VEHICLE.frontGrip),
+          Math.abs(v.forceRearY) / Math.max(1, v.loadRear * STANDARD_VEHICLE.rearGrip),
         ),
       ),
       wheelspin: Math.max(0, Math.min(1, v.wheelspin)),

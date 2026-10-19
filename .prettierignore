@@ -2,3 +2,8 @@ dist/
 node_modules/
 package-lock.json
 *.md
+.remember/
+.superpowers/
+# Xcode and XcodeGen own the formatting of these native files.
+ios/**/*.xcassets/
+ios/project.yml

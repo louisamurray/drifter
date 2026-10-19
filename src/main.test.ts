@@ -169,21 +169,27 @@ it('runs the actual session through development model changes, pause, restart an
   document.querySelector<HTMLButtonElement>('.screen-title [data-act="start"]')?.click();
   expect(document.querySelector('.screen-playing.active')).not.toBeNull();
   tick(1);
-  const practiceSpawn = harness.drawCar.mock.lastCall?.slice(1,4);
+  const practiceSpawn = harness.drawCar.mock.lastCall?.slice(1, 4);
   // A forced scorer finish must never be consulted in an untimed activity.
   harness.finish = true;
   tick(4200);
   expect(document.querySelector('.screen-playing.active')).not.toBeNull();
   expect(harness.saveBest).toHaveBeenCalledTimes(1);
-  key('w', 'keyup'); key('d', 'keyup'); key('w'); key('d'); tick(120);
-  expect(harness.drawCar.mock.lastCall?.slice(1,4)).not.toEqual(practiceSpawn);
-  key('r'); tick(1);
-  expect(harness.drawCar.mock.lastCall?.slice(1,4)).toEqual(practiceSpawn);
-  // OS key repeats after reset cannot resurrect a held throttle.
-  window.dispatchEvent(new KeyboardEvent('keydown', { key:'w', repeat:true }));
+  key('w', 'keyup');
+  key('d', 'keyup');
+  key('w');
+  key('d');
   tick(120);
-  expect(harness.drawCar.mock.lastCall?.slice(1,4)).toEqual(practiceSpawn);
-  key('Escape'); tick(120);
+  expect(harness.drawCar.mock.lastCall?.slice(1, 4)).not.toEqual(practiceSpawn);
+  key('r');
+  tick(1);
+  expect(harness.drawCar.mock.lastCall?.slice(1, 4)).toEqual(practiceSpawn);
+  // OS key repeats after reset cannot resurrect a held throttle.
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w', repeat: true }));
+  tick(120);
+  expect(harness.drawCar.mock.lastCall?.slice(1, 4)).toEqual(practiceSpawn);
+  key('Escape');
+  tick(120);
   expect(document.querySelector('.screen-paused.active')).not.toBeNull();
   document.querySelector<HTMLButtonElement>('.screen-paused [data-act="resume"]')?.click();
   tick(1);
@@ -213,7 +219,9 @@ it('runs the actual session through development model changes, pause, restart an
   expect(document.querySelector('.activity-cue')?.textContent).toContain('Start');
   key('Escape');
   document.querySelector<HTMLButtonElement>('.screen-paused [data-act="exit"]')?.click();
-  expect(document.querySelector('.challenge-breakdown')?.textContent).toContain('Line 0 + Angle 0 + Transition 0');
+  expect(document.querySelector('.challenge-breakdown')?.textContent).toContain(
+    'Line 0 + Angle 0 + Transition 0',
+  );
   expect(document.querySelector('.over-best')?.textContent).toContain('No best saved');
   expect(harness.saveBest).toHaveBeenCalledTimes(1);
 
