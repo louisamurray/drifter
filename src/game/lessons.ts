@@ -23,6 +23,8 @@ export function observe(car: CarState, t: CarTelemetry, offTrack: boolean): Obse
     offTrack,
   };
 }
+/** The marked transition eight: two loops of `radius` meeting at a crossing, left loop first. */
+export const LESSON_EIGHT = { x: 0, y: 900, radius: 300, band: 180 } as const;
 export const LESSONS = {
   initiate: {
     name: 'Initiate',
@@ -49,7 +51,10 @@ export const LESSONS = {
     minSpeed: 70,
     minSlip: 0.2,
     maxSlip: 0.95,
-    spawn: { x: 0, y: 200, heading: Math.atan2(-1300, -400) },
+    // Drive up into the crossing, where the left loop begins.
+    spawn: { x: LESSON_EIGHT.x, y: LESSON_EIGHT.y + 500, heading: -Math.PI / 2 },
+    /** Longest gap between the end of the left slide and a held right slide. */
+    switchSeconds: 4,
   },
 } satisfies Record<
   LessonId,
@@ -61,6 +66,7 @@ export const LESSONS = {
     minSlip: number;
     maxSlip: number;
     spawn: Pose;
+    switchSeconds?: number;
   }
 >;
 export interface LessonState {
@@ -116,13 +122,22 @@ export function updateLesson(s: LessonState, id: LessonId, o: Observation, dt: n
   const sign = Math.sign(o.slipAngle);
   const inSlide = Math.abs(o.slipAngle) >= lesson.minSlip && moving;
   if (id === 'transition') {
+    // Left loop first; rotating on the spot or driving an arbitrary S is insufficient.
+    const left = inSlide && sign === 1 && onLoop(o, -1);
     if (s.stage === 1) {
+      // The link stays armed while the first slide continues; the window starts when it ends.
+      if (left) {
+        s.switchTime = 0;
+        s.held = 0;
+        return;
+      }
       s.switchTime += dt;
-      if (s.switchTime > 6) {
+      if (s.switchTime > LESSONS.transition.switchSeconds) {
         s.stage = 0;
         s.held = 0;
         s.switchTime = 0;
-      } else if (inSlide && sign === -1 && o.x >= -80 && o.y < 150) {
+        s.cue = 'Link the slides sooner. Slide left, then switch at the crossing.';
+      } else if (inSlide && sign === -1 && onLoop(o, 1)) {
         s.held += dt;
         s.cue = 'Hold the right slide.';
         if (s.held >= lesson.duration) {
@@ -133,8 +148,7 @@ export function updateLesson(s: LessonState, id: LessonId, o: Observation, dt: n
       } else s.held = 0;
       return;
     }
-    // Left loop first; rotating on the spot or driving an arbitrary S is insufficient.
-    if (!(inSlide && sign === 1 && o.x < -80 && o.y < 800 && o.y > -100)) {
+    if (!left) {
       s.held = 0;
       return;
     }
@@ -142,6 +156,7 @@ export function updateLesson(s: LessonState, id: LessonId, o: Observation, dt: n
     if (s.held >= lesson.duration) {
       s.stage = 1;
       s.held = 0;
+      s.switchTime = 0;
       s.cue = 'Cross the switch and slide right.';
     }
     return;
@@ -160,7 +175,21 @@ export function updateLesson(s: LessonState, id: LessonId, o: Observation, dt: n
   }
 }
 
-/** Marked lesson eight, independent of the precision challenge. */
+/** On the marked loop of `side` (-1 left, +1 right): within its band and past the crossing. */
+function onLoop(o: Observation, side: -1 | 1): boolean {
+  const { x, y, radius, band } = LESSON_EIGHT;
+  const fromCentre = Math.hypot(o.x - (x + side * radius), o.y - y);
+  return side * (o.x - x) > 0 && Math.abs(fromCentre - radius) <= band;
+}
+
+/**
+ * Marked lesson eight, independent of the precision challenge. Over 0..2π: up from the
+ * crossing round the left loop (anticlockwise on screen), then round the right (clockwise).
+ */
 export function lessonEight(t: number): { x: number; y: number } {
-  return { x: -400 * Math.sin(t), y: 200 - 650 * Math.sin(2 * t) };
+  const { x, y, radius } = LESSON_EIGHT;
+  const u = ((t % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  const side = u < Math.PI ? -1 : 1;
+  const a = 2 * (u < Math.PI ? u : u - Math.PI);
+  return { x: x + side * radius * (1 - Math.cos(a)), y: y - radius * Math.sin(a) };
 }

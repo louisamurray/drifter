@@ -1,5 +1,12 @@
 import { createSession, type Activity, type LessonId } from './game/session';
-import { lessonEight, createLesson, observe, updateLesson, LESSONS } from './game/lessons';
+import {
+  createLesson,
+  LESSON_EIGHT,
+  LESSONS,
+  lessonEight,
+  observe,
+  updateLesson,
+} from './game/lessons';
 import {
   CHALLENGE_REVISION,
   CHALLENGE_SCORING,
@@ -716,7 +723,7 @@ function drawTargets(): void {
   if (session.activity === 'lesson') {
     ctx.fillStyle = config.palette.accent;
     ctx.font = '18px Archivo Expanded, sans-serif';
-    ctx.fillText('Switch · left to right', 24, 176);
+    ctx.fillText('Switch · left to right', LESSON_EIGHT.x + 24, LESSON_EIGHT.y - 24);
     ctx.restore();
     return;
   }
