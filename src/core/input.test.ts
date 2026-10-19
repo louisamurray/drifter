@@ -299,3 +299,78 @@ describe('desktop keyboard events', () => {
     expect(controls.raw().throttle).toBe(0);
   });
 });
+
+describe('T5 response and controller takeover', () => {
+  it('separates initial turn-in, centre return and full reversal with mirrored response', () => {
+    const r = {
+      stage1: 0.5,
+      stage1Seconds: 0.18,
+      stage2Seconds: 0.24,
+      releaseSeconds: 0.12,
+      reversalSeconds: 0.24,
+    };
+    const run = (from: number, target: number, frames: number) => {
+      const state = { steer: from, throttle: 0, handbrake: false };
+      for (let i = 0; i < frames; i++)
+        advanceControls(
+          state,
+          { steer: target, throttle: 0, handbrake: false, analog: false },
+          dt,
+          r,
+        );
+      return state.steer;
+    };
+    expect(run(0, 1, 26)).toBe(1);
+    expect(run(0, -1, 26)).toBe(-1);
+    expect(run(1, -1, 15)).toBe(-1);
+    expect(run(-1, 1, 15)).toBe(1);
+    expect(run(1, 0, 8)).toBeCloseTo(0);
+    expect(run(0, 1, 15)).toBeLessThan(1);
+  });
+
+  it('smooths binary release briefly but cuts immediately for the handbrake', () => {
+    const state = { steer: 0, throttle: 1, handbrake: false };
+    const raw = { steer: 0, throttle: 0, handbrake: false, analog: false };
+    advanceControls(state, raw, dt, ramp, 0.12, 0.04);
+    expect(state.throttle).toBeGreaterThan(0);
+    advanceControls(state, { ...raw, handbrake: true }, dt, ramp, 0.12, 0.04);
+    expect(state.throttle).toBe(0);
+  });
+
+  it('allows keyboard takeover, preserves analogue trigger values, and blocks held values after blur', async () => {
+    const { pad } = await import('./controller-fixture');
+    let pads = [pad()];
+    Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => pads });
+    const input = new TouchControls(document.createElement('canvas'));
+    input.scheme = 'thumb';
+    input.onControllerDisconnect = vi.fn();
+    input.pollController();
+    pads = [pad(0, 0.575, 0.525)];
+    input.pollController();
+    expect(input.sample(dt, ramp, 1).steer).toBeCloseTo(0.5);
+    expect(input.state.throttle).toBeCloseTo(0.5);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    input.pollController();
+    expect(input.source).toBe('keyboard');
+    expect(input.raw()).toMatchObject({ steer: -1, throttle: 1 });
+    pads = [pad()];
+    input.pollController();
+    pads = [pad(0, 1, 1)];
+    input.pollController();
+    window.dispatchEvent(new Event('blur'));
+    input.pollController();
+    expect(input.source).toBe('keyboard');
+    pads = [pad()];
+    input.pollController();
+    pads = [pad(0, 1, 1)];
+    input.pollController();
+    pads = [];
+    input.pollController();
+    expect(input.onControllerDisconnect).toHaveBeenCalledOnce();
+    expect(input.state).toEqual({ steer: 0, throttle: 0, handbrake: false });
+    expect(input.scheme).toBe('thumb');
+    input.dispose();
+    Reflect.deleteProperty(navigator, 'getGamepads');
+    vi.restoreAllMocks();
+  });
+});

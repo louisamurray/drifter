@@ -18,7 +18,8 @@ export function mountDebugPanel(onModelChange?: (model: HandlingModel) => void):
   const groups: Group[] = [
     { label: 'legacy physics / shared road assist', values: config.physics },
     { label: 'camera', values: config.camera },
-    { label: 'steer', values: config.input.steer },
+    { label: 'legacy steer', values: config.input.steer },
+    { label: 'force steer', values: config.input.force.steer },
   ];
 
   const root = document.createElement('details');

@@ -27,6 +27,19 @@ export const config = {
       stage2Seconds: 0.5,
       releaseSeconds: 0.1,
     },
+    /** Force-prototype tuning; keep the legacy timed rules unchanged. */
+    force: {
+      steer: {
+        stage1: 0.5,
+        stage1Seconds: 0.18,
+        stage2Seconds: 0.24,
+        releaseSeconds: 0.12,
+        reversalSeconds: 0.24,
+      },
+      throttleSeconds: 0.12,
+      throttleReleaseSeconds: 0.04,
+      stickFullAngle: 0.75,
+    },
     /** Seconds for a pressed gas pedal to reach full throttle in the two-thumb scheme. */
     throttleSeconds: 0.15,
     /**

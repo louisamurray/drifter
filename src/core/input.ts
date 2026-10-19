@@ -18,6 +18,7 @@
  * Space, Down or S is the handbrake, Escape or P pauses. Enter starts, retries or resumes.
  */
 import { angleDelta } from './angle';
+import { Controller } from './controller';
 
 export type ControlScheme = 'thumb' | 'pedals';
 
@@ -66,7 +67,7 @@ export interface RawControls {
   /** True when steer comes from the stick and should be applied as is, not ramped. */
   analog: boolean;
   handbrake: boolean;
-  /** 0 or 1. Automatic in the one-thumb scheme: on unless the handbrake is. */
+  /** 0..1 for a controller; binary for keys/touch. Automatic with one thumb. */
   throttle: number;
 }
 
@@ -157,15 +158,28 @@ export interface SteerRamp {
   stage1Seconds: number;
   stage2Seconds: number;
   releaseSeconds: number;
+  /** Full left-to-right travel time; omitted for the legacy response. */
+  reversalSeconds?: number;
 }
 
 /**
  * Two-stage steering ramp. Towards centre, or across it, moves at the release
- * rate. Away from centre, the first stage reaches `stage1` in `stage1Seconds`
+ * rate by default. An explicit reversal time applies through the opposite lock.
+ * Away from centre, the first stage reaches `stage1` in `stage1Seconds`
  * and the second continues to full lock over `stage2Seconds`.
  */
-export function rampSteer(current: number, target: number, dt: number, r: SteerRamp): number {
+export function rampSteer(
+  current: number,
+  target: number,
+  dt: number,
+  r: SteerRamp,
+  reversing = false,
+): number {
   const crossing = current !== 0 && Math.sign(target) !== Math.sign(current);
+  if ((crossing || reversing) && target !== 0 && r.reversalSeconds !== undefined) {
+    const step = (2 * dt) / r.reversalSeconds;
+    return current + Math.sign(target - current) * Math.min(Math.abs(target - current), step);
+  }
   if (target === 0 || crossing) {
     const step = dt / r.releaseSeconds;
     return current > 0 ? Math.max(0, current - step) : Math.min(0, current + step);
@@ -179,22 +193,45 @@ export function rampSteer(current: number, target: number, dt: number, r: SteerR
  * Advance the smoothed state by one physics step from raw controls. Digital
  * steer goes through the two-stage ramp; analog steer from the stick is
  * applied as is. Throttle rises over `throttleSeconds` (instantly when 0)
- * and drops at once, so a pressed pedal eases in and a released one lets go.
+ * releases over `throttleReleaseSeconds` (instantly when 0). Handbrake cuts
+ * automatic throttle immediately. Controller analogue values bypass these ramps.
  * Mutates and returns `state`.
  */
+// Retain reversal intent across centre without adding hidden physics state to InputState.
+const reversalTargets = new WeakMap<InputState, number>();
+
 export function advanceControls(
   state: InputState,
   raw: RawControls,
   dt: number,
   ramp: SteerRamp,
   throttleSeconds = 0,
+  throttleReleaseSeconds = 0,
 ): InputState {
-  state.steer = raw.analog ? raw.steer : rampSteer(state.steer, raw.steer, dt, ramp);
+  let reversal = reversalTargets.get(state);
+  if (raw.analog || raw.steer === 0 || reversal !== raw.steer || state.steer === raw.steer) {
+    reversalTargets.delete(state);
+    reversal = undefined;
+  }
+  if (
+    !raw.analog &&
+    raw.steer !== 0 &&
+    state.steer * raw.steer < 0 &&
+    ramp.reversalSeconds !== undefined
+  ) {
+    reversalTargets.set(state, raw.steer);
+    reversal = raw.steer;
+  }
+  state.steer = raw.analog
+    ? raw.steer
+    : rampSteer(state.steer, raw.steer, dt, ramp, reversal !== undefined);
   state.handbrake = raw.handbrake;
   state.throttle =
     throttleSeconds > 0 && raw.throttle > state.throttle
       ? Math.min(raw.throttle, state.throttle + dt / throttleSeconds)
-      : raw.throttle;
+      : throttleReleaseSeconds > 0 && raw.throttle < state.throttle && !raw.handbrake
+        ? Math.max(raw.throttle, state.throttle - dt / throttleReleaseSeconds)
+        : raw.throttle;
   return state;
 }
 
@@ -240,6 +277,37 @@ export class TouchControls {
   /** Called on Enter when no form control owns the key. */
   onConfirmKey: (() => void) | null = null;
 
+  readonly controller = new Controller();
+  source: 'keyboard' | 'touch' | 'controller' = 'keyboard';
+  onControllerDisconnect: (() => void) | null = null;
+
+  /** Also poll in menus for edge-triggered Start and pause. */
+  pollController(): void {
+    let pads: readonly (Gamepad | null)[] = [];
+    try {
+      if ('getGamepads' in navigator) pads = navigator.getGamepads();
+    } catch {
+      /* Restricted browser policy. */
+    }
+    const edges = this.controller.poll(pads);
+    if (edges.disconnected) {
+      this.reset();
+      this.onControllerDisconnect?.();
+      return;
+    }
+    if (this.controller.active) this.source = 'controller';
+    if (edges.pause) this.onPauseKey?.();
+    else if (edges.confirm) this.onConfirmKey?.();
+  }
+
+  private takeOver(source: 'keyboard' | 'touch'): void {
+    if (this.source === 'controller') {
+      this.reset();
+    }
+    this.controller.reset();
+    this.source = source;
+  }
+
   private readonly pointers = new Map<number, Touch>();
   private readonly keys = new Set<string>();
 
@@ -277,6 +345,7 @@ export class TouchControls {
 
   /** Raw, unsmoothed controls right now. */
   raw(): RawControls {
+    if (this.source === 'controller') return this.controller.controls;
     const k = this.keys;
     const touches = [...this.pointers.values()];
     const onStick = touches.find((t) => t.zone === 'stick');
@@ -310,8 +379,16 @@ export class TouchControls {
   }
 
   /** Advance the smoothed state by one physics step. */
-  sample(dt: number, ramp: SteerRamp, throttleSeconds = 0): InputState {
-    advanceControls(this.state, this.raw(), dt, ramp, throttleSeconds);
+  sample(dt: number, ramp: SteerRamp, throttleSeconds = 0, throttleReleaseSeconds = 0): InputState {
+    const raw = this.raw();
+    advanceControls(
+      this.state,
+      raw,
+      dt,
+      ramp,
+      this.source === 'controller' ? 0 : throttleSeconds,
+      this.source === 'controller' ? 0 : throttleReleaseSeconds,
+    );
     const zones = [...this.pointers.values()].map((t) => t.zone);
     for (const z of Object.keys(this.held) as Zone[]) this.held[z] = zones.includes(z);
     return this.state;
@@ -319,6 +396,11 @@ export class TouchControls {
 
   /** Drop any held input, e.g. when leaving the playing state. */
   readonly reset = (): void => {
+    this.controller.reset();
+    reversalTargets.delete(this.state);
+    this.source = 'keyboard';
+    this.stick.x = 0;
+    this.stick.y = 0;
     this.pointers.clear();
     this.keys.clear();
     this.state.steer = 0;
@@ -338,6 +420,7 @@ export class TouchControls {
       this.pad,
     );
     if (!zone) return;
+    this.takeOver('touch');
     this.pointers.set(e.pointerId, { zone, x: e.clientX, y: e.clientY });
     this.target.setPointerCapture(e.pointerId);
   };
@@ -380,6 +463,7 @@ export class TouchControls {
     }
     if (!KEYS.has(key)) return;
     e.preventDefault();
+    this.takeOver('keyboard');
     this.keys.add(key);
   };
 }
