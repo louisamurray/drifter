@@ -1,7 +1,7 @@
 import type { Observation } from './lessons';
 
 /** Frozen candidate rules. Change this revision whenever geometry or scoring changes. */
-export const CHALLENGE_REVISION = 's-bend-1';
+export const CHALLENGE_REVISION = 's-bend-2';
 export const CHALLENGE_RULES = {
   minSpeed: 70,
   minSlip: 0.2,
@@ -12,19 +12,20 @@ export const CHALLENGE_RULES = {
   transition: 600,
   seconds: 60,
 } as const;
+/** Driven upwards from y 1000: a left-hand corner bulging right, then a right-hand corner. */
 export function pathPoint(t: number): { x: number; y: number } {
-  return { x: -400 * Math.sin(2 * Math.PI * t), y: 1000 - 2000 * t };
+  return { x: 400 * Math.sin(2 * Math.PI * t), y: 1000 - 2000 * t };
 }
 const times = [0, 0.12, 0.25, 0.5, 0.62, 0.75, 1];
 const labels = ['Start', 'Outer 1', 'Clip 1', 'Switch', 'Outer 2', 'Clip 2', 'Finish'];
 export const CHALLENGE_GATES = times.map((t, i) => {
   const p = pathPoint(t);
-  const dx = -800 * Math.PI * Math.cos(2 * Math.PI * t);
+  const dx = 800 * Math.PI * Math.cos(2 * Math.PI * t);
   const dy = -2000;
   const length = Math.hypot(dx, dy);
   return { ...p, nx: dx / length, ny: dy / length, halfWidth: 180, label: labels[i] ?? '', t };
 });
-export const CHALLENGE_SPAWN = { x: 150, y: 1120, heading: Math.atan2(-2000, -800 * Math.PI) };
+export const CHALLENGE_SPAWN = { x: -150, y: 1120, heading: Math.atan2(-2000, 800 * Math.PI) };
 export type ZoneState = 'upcoming' | 'complete' | 'missed';
 export interface ChallengeState {
   next: number;
