@@ -41,6 +41,8 @@ The physical car, painted skidpad ring, parking-bay dimensions and live camera s
 
 ## Stage status
 
+Later update: T4 practice, the lessons and the challenge are implemented; see the [T4, T6–T11 evidence](2026-10-19-activities-t4-t11.md). The status below records this stage as it was.
+
 T1's engineering baseline is captured in [handling-baseline.md](2026-10-19-handling-baseline.md). Human baseline, physical-input and device evidence remain pending. D1 has an initial reviewable screen set; its remaining variants are listed above. Next engineering work is **T2**, the isolated force-based solver and its invariants, followed by T3 integration and T4 practice implementation.
 
 Final local checks after the enlargement: lint, typecheck, all **123 tests across 16 files**, production build, changed-code/configuration formatting and documentation links passed. The repository-wide format check still has the four pre-existing iOS failures recorded in the baseline. The scoped Impeccable detector on `src/config.ts` returned no findings. No full browser or physical-device acceptance is implied by those results.

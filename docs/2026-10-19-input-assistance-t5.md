@@ -2,6 +2,7 @@
 
 Date: 19 October 2026
 Status: implemented and checked locally. T4/Gate 1, physical controller/touch evaluation and human handling acceptance remain pending. This slice does not complete those gates or implement T6/T7.
+Later update: T4, T6 and T7 are implemented; see the [T4, T6–T11 evidence](2026-10-19-activities-t4-t11.md). Physical controller, touch and human checks are still pending.
 
 ## Response and ownership
 

@@ -1,7 +1,7 @@
 # Drifter: handling and engagement development plan
 
 Date: 19 October 2026  
-Status: Phase 0 engineering baseline, T2 isolated solver and T3 development integration complete locally; initial D1 studies created. Human validation and T4 untimed practice remain pending. The requested car park enlargement is implemented.
+Status: engineering work for T1–T10 is implemented and checked locally, and T11's default-handling decision is recorded: legacy stays the default for timed courses. Proposed D1–D3 screens exist in Figma. Every human, physical-device and controller check remains pending, so Gates 1–4 are not passed. See the [T4, T6–T11 evidence](2026-10-19-activities-t4-t11.md). The requested car park enlargement is implemented.
 
 Repository inspected: `dedc31f`.  
 Input: [drift physics and engagement research](2026-10-19-drift-physics-and-engagement-research.md).  
@@ -33,7 +33,7 @@ This plan changes the original direction in [PLAN.md](PLAN.md): physical handlin
 - `src/game/scoring.ts` owns both score and countdown. Untimed practice needs an explicit session policy rather than a very large timer or hidden timer display.
 - `src/storage.ts` keys best scores by course only. New physics, scoring and assistance could otherwise make incomparable runs share one best.
 
-Initial Figma inspection found one empty page, `0:1` / `Page 1`. Eight editable D1 studies have since been created in the supplied file; see the [practice design record](2026-10-19-practice-design.md). They are proposed layouts, with remaining variants and runtime validation recorded there. Preserve the documented visual direction in `docs/PLAN.md`.
+Initial Figma inspection found one empty page, `0:1` / `Page 1`. Eight editable D1 studies were then created; see the [practice design record](2026-10-19-practice-design.md). A later design session built pages for D1 Practice, D2 Learning and assistance, and D3 Precision challenge, all marked proposed. Preserve the documented visual direction in `docs/PLAN.md`.
 
 ### Principles
 
@@ -152,11 +152,15 @@ Status: implemented locally; see [T3 integration evidence](2026-10-19-vehicle-in
 
 **T4 — Ship the practice prototype** · Engineering + design · Depends on: T3, D1
 
+Status: implemented in `fd34adb`; reset after leaving a lesson fixed in `8e10e70`. See the [T4, T6–T11 evidence](2026-10-19-activities-t4-t11.md).
+
 - Add the untimed activity and entry, direct spawn, quick reset, pause, exit and practice overview.
 - Centralise reset ownership for car/previous-frame state, input smoothing, load history, camera, objective state, particles, audio and rubber. Reuse existing reset behaviour where applicable.
 - Preserve existing timed/free-drift runs and desktop control visibility. Add session integration regressions rather than testing the HUD in isolation only.
 
 **Gate 1:** deterministic and stable manoeuvres; left/right symmetry; grass transitions; correct coordinate conversion; practice can run beyond 60 seconds and reset/pause/exit without saving a best. A manual keyboard walkthrough can initiate and catch a slide. This is the first playable delivery; lessons and precision scoring are not required yet.
+
+Gate 1 status: the engineering checks pass. A person's keyboard walkthrough is still pending.
 
 ### Phase 2 — inputs, assistance and learning
 
@@ -170,11 +174,15 @@ Status: implemented locally; see [T5 input and assistance evidence](2026-10-19-i
 
 **T6 — Make control legible** · Engineering + design · Depends on: T5, D2
 
+Status: implemented. Applied wheel angle is drawn, squeal follows grip use and wheelspin gives a small pitch rise. The wheelspin cue rarely fires under standard tuning; whether it helps is a human question.
+
 - Draw applied road-wheel steering. Map tyre feedback to available grip/utilisation where telemetry supports it; retain quiet off-road behaviour.
 - Use the model's approximate wheelspin signal for a restrained engine cue if it improves comprehension. Do not present it as simulated RPM or add a gear display.
 - Keep cues brief and non-essential to driving with sound muted or motion reduced.
 
 **T7 — Add three optional lessons** · Engineering + design · Depends on: T5, T6, D2
+
+Status: implemented in `fd34adb`. The Transition eight was redrawn as two drivable 300-unit loops with a switch window that runs from the end of the left slide (`c6de77a`). All three lessons complete with the real car under both assistance profiles. Thresholds are calibrated against scripted drives only.
 
 - Initiate: reach a suitable speed and create a controlled slide through steering/throttle or a short handbrake pull.
 - Sustain: maintain a configurable slip/speed envelope for a continuous interval while moving within the practice area.
@@ -183,9 +191,13 @@ Status: implemented locally; see [T5 input and assistance evidence](2026-10-19-i
 
 **Gate 2:** regression checks cover each input and assistance profile. Moderated comparison establishes whether players can repeat a slide, connect directions and explain a loss of control. Resolve blocking comprehension or recovery failures before precision scoring. Set numeric playtest targets after baseline observations, then freeze them before the next comparison.
 
+Gate 2 status: regression checks cover each input and assistance profile. The moderated comparison has not happened, so Gate 2 is not passed.
+
 ### Phase 3 — one precision-scored corner sequence
 
 **T8 — Define the course and deterministic evaluator** · Engineering + design · Depends on: Gate 2, D3
+
+Status: implemented ahead of Gate 2, because Gate 2 depends on people. The course is `s-bend-2`: the first corner was mirrored to bend left, as the evaluator expects (`ef98485`). Scoring `precision-2` records reconciled score events (`edfae10`). A recorded real-car drive and exploit drives verify it (`b72b497`).
 
 - Author two opposite-direction corners with ordered entry/exit gates, clipping points and outer zones. Reuse existing geometry utilities where appropriate.
 - Define forward progress from ordered gates and along-course movement; use swept movement checks or equivalent to avoid skipping a small zone between steps.
@@ -195,15 +207,21 @@ Status: implemented locally; see [T5 input and assistance evidence](2026-10-19-i
 
 **T9 — Explain the result and enable comparable bests** · Engineering + design · Depends on: T8, D3
 
+Status: implemented. Results show contributions, the first loss reason (including an early finish) and the ruleset. Bests are keyed by physics, scoring, course, assistance and controls.
+
 - Show total, line/angle/transition contributions and the first actionable loss reason. Totals must reconcile with evaluator events.
 - Add retry, overview and correctly labelled best/no-best states. Use the record identity defined above; separate assisted and reduced-assistance results.
 - Preserve the rubber share composition and handle unavailable sharing without losing the result or retry path.
 
 **Gate 3:** identical input fixtures produce identical score events; a clean linked sequence beats exploit fixtures under the frozen rules; results explain the difference. Human sessions check whether the feedback suggests a useful next attempt. Approval of scoring weights depends on this evidence, not their visual polish.
 
+Gate 3 status: the fixture, exploit and explanation checks pass. Human sessions are pending.
+
 ### Phase 4 — browser release and adoption
 
 **T10 — Complete regression and performance evidence** · Engineering · Depends on: Gate 3
+
+Status: the required checks pass, and desktop frame cost and bundle size are recorded. `?debug` now shows frame timing. Touch-hardware, phone frame-rate and controller checks are pending.
 
 - Run lint, typecheck, all unit tests, format check and production build using the repository scripts.
 - Recheck title ghosts, both existing timed courses, lessons, challenge completion, pause/resume, reset, share, storage failure, muted audio, blur, resize and input-device changes.
@@ -212,11 +230,15 @@ Status: implemented locally; see [T5 input and assistance evidence](2026-10-19-i
 
 **T11 — Choose defaults and release** · Product/design + engineering · Depends on: T10 and human gates
 
+Status: decided to keep legacy handling as the default for Circuit and Free drift until human comparison evidence exists; the force model stays in practice, lessons and the challenge. README, the original plan and a [change note](2026-10-19-change-note.md) are updated. Deploying to `main` awaits the owner.
+
 - Decide from comparison evidence whether the new model should become the default for existing timed courses. Keep the prototype available if it is stable but not yet preferable.
 - If adopting it, preserve existing course choices and timed rules, version their bests, retune the title drivers and publish a short change note covering handling, assistance and historical scores.
 - Update README and original-plan current-direction notes to distinguish current behaviour from legacy tuning advice. Keep a reversible release path to the previous default; never merge incompatible results during rollback.
 
 **Gate 4:** required checks pass, human findings and hardware evidence are recorded, blocking issues are resolved, and the default-handling decision is explicit. Multiplayer, a garage, online accounts and new content are not release dependencies.
+
+Gate 4 status: the required checks pass and the default decision is explicit. Human and hardware evidence is missing, so Gate 4 is not passed.
 
 ## 6. Verification matrix
 
@@ -244,13 +266,21 @@ Maintain a decision log in implementation evidence with: observation, severity, 
 
 Critical path: **T1 → T2 → T3 → T4 → Gate 1 → T5 → T6/T7 → Gate 2 → T8 → T9 → T10 → T11**. D1–D3 can be prepared ahead of their dependent engineering work. T6 and T7 share telemetry and copy decisions; agree those before splitting their implementation.
 
-T1's engineering capture and conversion contract are recorded in the [handling baseline](2026-10-19-handling-baseline.md); human baseline and a complete fresh browser/device pass remain pending. D1's initial studies are linked above. The car park is now 2,700 × 3,900 world units at the user's request; its title demo remains a central figure of eight. [T2 is implemented and locally verified](2026-10-19-force-solver-t2.md). Next engineering work is **T3**, then **T4** for the first playable handling/practice slice. Start T3 with two 120 Hz solver substeps per existing 60 Hz web update and validate integration/performance before adoption. No delivery dates are committed here.
+T1's engineering capture and conversion contract are recorded in the [handling baseline](2026-10-19-handling-baseline.md). [T2](2026-10-19-force-solver-t2.md), [T3](2026-10-19-vehicle-integration-t3.md), [T5](2026-10-19-input-assistance-t5.md) and [T4, T6–T11](2026-10-19-activities-t4-t11.md) are implemented and locally verified. The car park is 2,700 × 3,900 world units; its title demo remains a central figure of eight.
+
+The next step is people, not code:
+
+1. Run the human baseline and the moderated Gate 2 and Gate 3 sessions. Use the decision log in the T4–T11 evidence, and set numeric targets before tuning.
+2. Measure on physical phones and a controller, with `?debug` frame timing.
+3. Check the D2 eight and D3 course schematics against the shipped geometry.
+
+Revisit the default handling only with that evidence. No delivery dates are committed here.
 
 Later priorities, conditional on playtesting: personal-best ghost with compatibility checks, short medal challenges and additional corner sequences. Add explicit wheel angular speed/slip ratio only when a measured handling or feedback limitation justifies it.
 
 ## 9. Planning artefacts and evidence limits
 
 - This Markdown file is the detailed development plan; the supplied research remains the external-source record. This task did not revalidate those public sources or add new external factual claims.
-- The supplied Figma Design file was initially empty. D1 now has eight editable proposed screens; approval, remaining variants and runtime/device validation are outstanding. D2–D3 remain future deliverables.
+- The supplied Figma Design file was initially empty. A later session added proposed D1, D2 and D3 pages, a brand guide, foundations and components. Their approval and runtime or device validation are outstanding. This plan's implementation changed the challenge's hand and the lesson eight after those pages were drawn.
 - A FigJam dependency/gate diagram was submitted through Figma. Generation requires a team/organisation selection in the Figma widget; a completed board URL is not yet available. The source diagram is retained in [drift-development-sequence.mmd](drift-development-sequence.mmd).
-- Writing the original plan did not change gameplay or run tests. Subsequent work added baseline fixtures, the requested larger car park and the isolated T2 solver with native-reference and numerical regressions. T2 passes local checks but is not integrated into the live web game. Human/device playtests remain pending. Each delivery gate requires its own implementation evidence.
+- Writing the original plan did not change gameplay or run tests. Later work added baseline fixtures, the larger car park, the T2 solver, its integration, input and assistance, practice, lessons, the challenge, and release checks, each with its own evidence record. Human and device playtests remain pending, and each delivery gate still needs its human evidence.

@@ -26,7 +26,7 @@ Model changes, restart and course changes reset solver history, previous project
 
 Force runs still use the current timed scoring loop for development evaluation. They cannot update either in-memory or persisted bests. Their title hides legacy best comparisons, results say **Handling prototype · best not saved**, and share text labels the score experimental. Legacy saves remain unchanged. Competitive record identity/versioning must be implemented before this restriction can be removed; this task does not enable force competitive records.
 
-Untimed practice, quick reset and its navigation remain T4; native iOS is unchanged. Existing title/test drivers have not been retuned and all legacy course/handling assertions remain intact. Force ghosts currently reuse those drivers; their handling quality is not accepted by the legacy driver tests.
+Untimed practice, quick reset and its navigation remain T4 (since implemented; see the [T4, T6–T11 evidence](2026-10-19-activities-t4-t11.md)); native iOS is unchanged. Existing title/test drivers have not been retuned and all legacy course/handling assertions remain intact. Force ghosts currently reuse those drivers; their handling quality is not accepted by the legacy driver tests.
 
 ## Verification
 

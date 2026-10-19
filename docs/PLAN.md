@@ -2,7 +2,7 @@
 
 A simple, satisfying car-drifting game for mobile browsers. Top-down, thumb controls, short sessions, instant restart.
 
-Current direction (19 October 2026): the [handling and engagement development plan](2026-10-19-drift-development-plan.md) adds force-based handling and untimed practice to the original v1 scope below. Phase 0's engineering baseline, initial Figma practice studies, T2's isolated solver and T3's development-only gameplay integration are recorded; the untimed activity is not implemented yet. Legacy remains the default, and the force prototype cannot save competitive bests. The web car park has been enlarged to 2700 × 3900 world units.
+Current direction (19 October 2026): the [handling and engagement development plan](2026-10-19-drift-development-plan.md) adds force-based handling, untimed practice, three optional lessons and a precision-scored two-corner challenge to the original v1 scope below. Its engineering work is implemented and locally verified; human, device and controller evaluation is pending. Circuit and Free drift keep the legacy arcade model, scoring and bests described here; practice, lessons and the challenge use force handling on the open lot, and challenge bests are kept per ruleset. Sections 2.3 and 6 describe the legacy model. Force handling lives in `src/game/vehicle.ts`, its input response in `config.input.force`, and its evidence in the plan's linked records. The web car park is 2700 × 3900 world units. See the [change note](2026-10-19-change-note.md).
 
 ---
 
@@ -54,6 +54,8 @@ Desktop fallback for development and testing: arrow keys or A/D steer, Up or W i
 Rationale: the physics decides the slide angle, so the player's only decisions are when to start sliding and when to stop. Binary hold controls make those decisions legible through the thumb, need no invisible centre point, and work one-handed (alternate sides) or two-handed (one thumb per side, handbrake by adding the second). An earlier drag-to-steer scheme was built and rejected: its centre was wherever the thumb first landed, steer and throttle were welded together, and full lock arrived within a few millimetres of travel.
 
 ### 2.3 Car physics (arcade, not simulation)
+This is the legacy model that timed Circuit and Free drift runs still use. Practice, lessons and the challenge use the force-based solver instead; see Current direction above.
+
 Simple velocity-based model, tuned by feel:
 - State: position, heading, velocity vector, yaw rate.
 - Each frame, split velocity into **forward** (along heading) and **lateral** (sideways) components.
@@ -265,7 +267,8 @@ The deploy workflow lints, tests and builds on every push to `main` and publishe
 - **Unit (Vitest):** physics step determinism, drift threshold edge cases, multiplier timing, distance-to-polyline, lap counter does not double-count.
 - **Drivability (Vitest):** the autopilot and naive thumb runs in section 2.3. Tune against the thumb's off-track time, not against how a change feels to the person who made it.
 - **Manual device matrix:** iPhone (Safari), mid-range Android (Chrome), one tablet. Check input, audio unlock, safe areas, frame rate via a debug FPS toggle.
-- **Tuning sessions:** a hidden debug panel (query string `?debug`) exposes the physics, camera and steering tunables as sliders so feel can be adjusted on a real phone without rebuilding, with an autopilot toggle and aggression slider to watch balance without thumbs. The same flag draws a readout of speed, slip, laps, FPS, input, and the audio and haptics paths in use.
+- **Tuning sessions:** a hidden debug panel (query string `?debug`) exposes the physics, camera and steering tunables as sliders so feel can be adjusted on a real phone without rebuilding, with an autopilot toggle and aggression slider to watch balance without thumbs. The same flag draws a readout of speed, slip, laps, FPS, input, the audio and haptics paths in use, and the cost of each update and render callback (also available as `window.drifterTiming`).
+- **Force-handling fixtures (Vitest):** scripted drivers run the real force car through the lessons and the challenge, and a recorded challenge drive must replay to identical score events. See the [activities evidence](2026-10-19-activities-t4-t11.md).
 
 ---
 
