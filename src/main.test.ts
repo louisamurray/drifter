@@ -1,6 +1,7 @@
 import { pad } from './core/controller-fixture';
 import { expect, it, vi } from 'vitest';
 import type { LoopCallbacks } from './core/loop';
+import type { FrameTimer } from './debug/timing';
 import type * as StorageModule from './storage';
 import type * as ScoringModule from './game/scoring';
 import type * as DrawModule from './render/draw';
@@ -92,6 +93,10 @@ it('runs the actual session through development model changes, pause, restart an
   selectModel('force');
   key('Enter');
   tick(240);
+  // ?debug times both loop callbacks for frame-cost measurement.
+  const timing = (window as Window & { drifterTiming?: FrameTimer }).drifterTiming;
+  expect(timing?.stats('update').samples).toBeGreaterThan(0);
+  expect(timing?.stats('render').samples).toBeGreaterThan(0);
   key('w');
   key('d');
   tick(120);

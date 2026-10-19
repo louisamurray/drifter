@@ -71,6 +71,7 @@ import { haptic, hapticsDescription } from './core/haptics';
 import { fmtScore, Hud } from './render/hud';
 import { mountDebugPanel } from './debug/panel';
 import { debugState } from './debug/state';
+import { FrameTimer } from './debug/timing';
 import {
   loadAssistance,
   saveAssistance,
@@ -815,7 +816,7 @@ function render(alpha: number): void {
       lastControl.steer,
       lastControl.throttle,
       safeArea('--sat') + 70,
-      `${handling.diagnostics()}\n${mode} ${scheme} ${input.source} ${assistance} · ${audio.describe()}\nhaptics: ${hapticsDescription()}`,
+      `${handling.diagnostics()}\n${mode} ${scheme} ${input.source} ${assistance} · ${audio.describe()}\nhaptics: ${hapticsDescription()}\n${timing.summary()}`,
     );
   }
 }
@@ -835,7 +836,20 @@ function safeArea(name: '--sat' | '--sab' | '--sal' | '--sar'): number {
 
 // ---- Boot -----------------------------------------------------------------
 
-const loop = new GameLoop({ update, render }, config.loop);
+/** Under ?debug, time both loop callbacks; the readout and window.drifterTiming report them. */
+const timing = new FrameTimer();
+const timed =
+  <T>(kind: 'update' | 'render', callback: (arg: T) => void) =>
+  (arg: T): void => {
+    const begin = performance.now();
+    callback(arg);
+    timing.record(kind, performance.now() - begin);
+  };
+if (debug) (window as Window & { drifterTiming?: FrameTimer }).drifterTiming = timing;
+const loop = new GameLoop(
+  debug ? { update: timed('update', update), render: timed('render', render) } : { update, render },
+  config.loop,
+);
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
