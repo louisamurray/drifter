@@ -69,6 +69,7 @@ export function stepCar(
   assistYaw = 0,
   /** Corner lift, 0 (none) to 1 (throttle fully off, lift drag fully on). */
   lift = 0,
+  counterSteer = 1,
 ): CarState {
   // Decompose in the current heading frame
   let fx = Math.cos(car.heading);
@@ -111,7 +112,7 @@ export function stepCar(
   if (Math.abs(input.steer) < 0.05) {
     // Hands off: road assist, and the nose eases back towards the direction
     // of travel. While a side is held the player owns the nose.
-    const align = vF > 0 ? p.alignGain * Math.atan2(vL, vF) : 0;
+    const align = vF > 0 ? counterSteer * p.alignGain * Math.atan2(vL, vF) : 0;
     targetYaw += (assistYaw + align) * lowSpeed;
   }
   car.yawRate += (targetYaw - car.yawRate) * (1 - Math.exp(-p.yawResponse * dt));

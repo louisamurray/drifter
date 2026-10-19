@@ -1,3 +1,4 @@
+import { ASSISTANCE, type AssistanceProfile } from './assistance';
 import { config } from '../config';
 import type { InputState } from '../core/input';
 import { createCar, ROAD, stepCar, telemetry, type CarState, type CarTelemetry } from './car';
@@ -64,6 +65,7 @@ export class Handling {
   constructor(
     readonly model: HandlingModel,
     pose: Pose,
+    readonly profile: AssistanceProfile = 'assisted',
   ) {
     this.car = createCar(pose.x, pose.y, pose.heading);
     this.vehicle = worldToVehicle(this.car);
@@ -84,7 +86,7 @@ export class Handling {
 
   /** Force handling cannot enter legacy records until competitive ruleset identity exists. */
   get canSaveBest(): boolean {
-    return this.model === 'legacy';
+    return this.model === 'legacy' && this.profile === 'assisted';
   }
 
   get appliedWheelAngle(): number {
@@ -112,6 +114,10 @@ export class Handling {
     if (!Number.isFinite(dt) || dt < 0 || dt > 1 / 60)
       throw new RangeError('Invalid handling timestep');
     if (dt === 0) return;
+    const policy = ASSISTANCE[this.profile];
+    const roadYaw = options.roadYaw * policy.roadFollowing;
+    const lift = options.lift * policy.cornerBraking;
+    const counterSteer = options.counterSteer * policy.counterSteer;
     if (this.model === 'legacy') {
       stepCar(
         this.car,
@@ -119,8 +125,9 @@ export class Handling {
         dt,
         config.physics,
         options.offTrack ? config.offTrack : ROAD,
-        options.roadYaw,
-        options.lift,
+        roadYaw,
+        lift,
+        policy.counterSteer,
       );
       this.wheelAngle = input.steer * 0.42;
       return;
@@ -132,13 +139,12 @@ export class Handling {
       steer:
         Math.abs(input.steer) < 0.05 && !options.offTrack && speed > STANDARD_VEHICLE.lowSpeed
           ? -Math.atan(
-              (options.roadYaw *
-                (STANDARD_VEHICLE.frontAxleDistance + STANDARD_VEHICLE.rearAxleDistance)) /
+              (roadYaw * (STANDARD_VEHICLE.frontAxleDistance + STANDARD_VEHICLE.rearAxleDistance)) /
                 speed,
             )
           : 0,
-      lift: options.lift,
-      counterSteer: options.counterSteer,
+      lift,
+      counterSteer,
     };
     const demand = { ...input, steer: -input.steer };
     const surface = options.offTrack ? GRASS : ASPHALT;

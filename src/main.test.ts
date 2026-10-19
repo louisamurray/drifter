@@ -1,3 +1,4 @@
+import { pad } from './core/controller-fixture';
 import { expect, it, vi } from 'vitest';
 import type { LoopCallbacks } from './core/loop';
 import type * as StorageModule from './storage';
@@ -122,6 +123,46 @@ it('runs the actual session through development model changes, pause, restart an
   expect(harness.saveBest).toHaveBeenCalledExactlyOnceWith('track', 999);
   expect(document.querySelector('.over-best')?.textContent).toContain('Circuit best');
   expect(document.querySelector('.over-newbest')?.classList.contains('show')).toBe(true);
+  // Assistance changes are title-only session changes and never enter legacy bests.
+  harness.finish = false;
+  selectModel('legacy');
+  document.querySelector<HTMLButtonElement>('[data-profile="reduced"]')?.click();
+  expect(document.querySelector('.screen-title.active')).not.toBeNull();
+  expect(document.querySelector('[data-profile="reduced"]')?.getAttribute('aria-pressed')).toBe(
+    'true',
+  );
+  key('Enter');
+  tick(240);
+  harness.finish = true;
+  tick(1);
+  expect(harness.saveBest).toHaveBeenCalledTimes(1);
+  expect(document.querySelector('.over-best')?.textContent).toContain('best not saved');
+
+  harness.finish = false;
+  selectModel('legacy');
+  document.querySelector<HTMLButtonElement>('[data-profile="assisted"]')?.click();
+  let pads: Gamepad[] = [pad()];
+  Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => pads });
+  tick(1); // Neutral arms controller.
+  pads = [pad(0, 0, 0, [9])];
+  tick(1); // Start edge.
+  pads = [pad()];
+  tick(240);
+  pads = [pad(0, 0.5, 0.5)];
+  tick(120);
+  pads = [];
+  tick(1);
+  expect(document.querySelector('.screen-paused.active')).not.toBeNull();
+  const disconnectedPose = harness.drawCar.mock.lastCall?.slice(1, 4);
+  tick(120);
+  expect(harness.drawCar.mock.lastCall?.slice(1, 4)).toEqual(disconnectedPose);
+  // Keyboard can resume after controller loss; the entire mixed-input run stays isolated.
+  key('Enter');
+  harness.finish = true;
+  tick(1);
+  expect(harness.saveBest).toHaveBeenCalledTimes(1);
+  expect(document.querySelector('.over-best')?.textContent).toContain('best not saved');
+  Reflect.deleteProperty(navigator, 'getGamepads');
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });

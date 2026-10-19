@@ -1,4 +1,5 @@
 import './style.css';
+import { ASSISTANCE, type AssistanceProfile } from './game/assistance';
 import { config } from './config';
 import { CanvasSurface } from './core/canvas';
 import { TouchControls, type ControlScheme } from './core/input';
@@ -49,7 +50,16 @@ import { haptic, hapticsDescription } from './core/haptics';
 import { fmtScore, Hud } from './render/hud';
 import { mountDebugPanel } from './debug/panel';
 import { debugState } from './debug/state';
-import { loadBest, loadMode, loadScheme, saveBest, saveMode, saveScheme } from './storage';
+import {
+  loadAssistance,
+  saveAssistance,
+  loadBest,
+  loadMode,
+  loadScheme,
+  saveBest,
+  saveMode,
+  saveScheme,
+} from './storage';
 import { AudioEngine } from './audio/audio';
 
 const canvasEl = document.getElementById('game');
@@ -87,6 +97,9 @@ input.pad = config.input.pad;
 hud.setPadLayout(config.input.pad);
 input.safeRight = safeArea('--sar');
 input.safeBottom = safeArea('--sab');
+window.addEventListener('blur', () => {
+  if (state === 'playing' || state === 'countdown') setState('paused');
+});
 window.addEventListener('resize', () => {
   input.safeRight = safeArea('--sar');
   input.safeBottom = safeArea('--sab');
@@ -116,7 +129,10 @@ function skidsFor(m: GameMode): SkidLayer {
 }
 
 // Run state, rebuilt on every restart
-let handling = new Handling('legacy', start);
+let assistance: AssistanceProfile = loadAssistance();
+let usedController = false;
+const canSaveBest = () => handling.canSaveBest && !usedController;
+let handling = new Handling('legacy', start, assistance);
 let car = handling.car;
 const prev: CarState = { ...car };
 let laps = createLapState();
@@ -146,6 +162,7 @@ let state: GameState = 'title';
 
 function resetRun(): void {
   handling.reset(start);
+  usedController = false;
   lastControl = { steer: 0, throttle: 0, handbrake: false };
   Object.assign(carLook, { steer: 0, roll: 0, brake: 0 });
   Object.assign(shake, createShake());
@@ -174,7 +191,7 @@ function setState(next: GameState): void {
   if (from === 'paused' && next !== 'paused') audio.resume();
   if (next === 'title') {
     resetRun();
-    hud.setBests(handling.canSaveBest ? bests : { track: 0, free: 0 });
+    hud.setBests(canSaveBest() ? bests : { track: 0, free: 0 });
     audio.stopEngine();
   } else if (next === 'countdown') {
     resetRun();
@@ -184,16 +201,17 @@ function setState(next: GameState): void {
     audio.unlock();
     audio.startEngine();
   } else if (next === 'paused') {
+    input.reset();
     audio.suspend();
   } else if (next === 'gameover') {
     input.reset();
     audio.stopEngine(1.2);
-    newBest = handling.canSaveBest && score.score > bests[mode];
+    newBest = canSaveBest() && score.score > bests[mode];
     if (newBest) {
       bests[mode] = score.score;
       saveBest(mode, score.score);
     }
-    hud.setGameOver(score.score, bests[mode], newBest, handling.canSaveBest);
+    hud.setGameOver(score.score, bests[mode], newBest, canSaveBest());
   }
 }
 
@@ -218,6 +236,19 @@ function setMode(next: GameMode): void {
   setState('title');
 }
 
+hud.setAssistance(assistance);
+hud.onAssistance = (profile) => {
+  if (state !== 'title') return;
+  assistance = profile;
+  saveAssistance(profile);
+  handling = new Handling(handling.model, start, assistance);
+  car = handling.car;
+  hud.setAssistance(profile);
+  setState('title');
+};
+input.onControllerDisconnect = () => {
+  if (state === 'playing' || state === 'countdown') setState('paused');
+};
 hud.setMode(mode);
 hud.onMode = setMode;
 hud.setControls(scheme);
@@ -265,7 +296,7 @@ input.onPauseKey = () => {
 
 async function share(): Promise<void> {
   const where = mode === 'track' ? 'in Drifter' : "in Drifter's open lot";
-  const text = handling.canSaveBest
+  const text = canSaveBest()
     ? `I scored ${fmtScore(score.score)} ${where}. Can you beat it?`
     : `Handling prototype ${where} · experimental score ${fmtScore(score.score)}`;
   const url = location.origin + location.pathname;
@@ -311,7 +342,9 @@ function stepPhysics(dt: number, ctl: InputState, manual = false, pointed = fals
       : 0;
   handling.step(ctl, dt, { offTrack, roadYaw: assist, lift, counterSteer: 1 });
   carLook.steer = handling.appliedWheelAngle;
-  carLook.brake = ctl.handbrake ? 1 : Math.max(lift, manual && ctl.throttle < 0.5 ? 0.6 : 0);
+  carLook.brake = ctl.handbrake
+    ? 1
+    : Math.max(lift * ASSISTANCE[assistance].cornerBraking, manual && ctl.throttle < 0.5 ? 0.6 : 0);
   const lapsBefore = laps.laps;
   if (onRoad) {
     const q = nearestOnTrack(track, car.x, car.y);
@@ -409,6 +442,7 @@ function ghostInput(dt: number, aggression = 1): InputState {
 }
 
 function update(dt: number): void {
+  input.pollController();
   switch (state) {
     case 'title': {
       stepPhysics(dt, ghostInput(dt));
@@ -436,11 +470,23 @@ function update(dt: number): void {
       break;
     }
     case 'playing': {
-      const manual = !debugState.autopilot && scheme === 'pedals';
+      const manual =
+        !debugState.autopilot && (scheme === 'pedals' || input.source === 'controller');
+      if (!debugState.autopilot && input.source === 'controller') usedController = true;
+      const force = handling.model === 'force';
+      input.pad = {
+        ...config.input.pad,
+        stickFullAngle: force ? config.input.force.stickFullAngle : config.input.pad.stickFullAngle,
+      };
       input.carHeading = car.heading;
       const ctl = debugState.autopilot
         ? ghostInput(dt, debugState.aggression)
-        : input.sample(dt, config.input.steer, config.input.throttleSeconds);
+        : input.sample(
+            dt,
+            force ? config.input.force.steer : config.input.steer,
+            force ? config.input.force.throttleSeconds : config.input.throttleSeconds,
+            force ? config.input.force.throttleReleaseSeconds : 0,
+          );
       stepPhysics(dt, ctl, manual, manual && input.held.stick);
       // Hold cues stay up for a new player until their first lap, or first banked chain on the lot
       const learning =
@@ -539,7 +585,7 @@ function render(alpha: number): void {
       lastControl.steer,
       lastControl.throttle,
       safeArea('--sat') + 70,
-      `${handling.diagnostics()}\n${mode} ${scheme} · ${audio.describe()}\nhaptics: ${hapticsDescription()}`,
+      `${handling.diagnostics()}\n${mode} ${scheme} ${input.source} ${assistance} · ${audio.describe()}\nhaptics: ${hapticsDescription()}`,
     );
   }
 }
@@ -563,7 +609,8 @@ const loop = new GameLoop({ update, render }, config.loop);
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    if (state === 'playing') setState('paused');
+    if (state === 'playing' || state === 'countdown') setState('paused');
+    input.reset();
     audio.suspend();
     loop.stop();
   } else {
@@ -576,7 +623,7 @@ if (debug)
   mountDebugPanel(
     import.meta.env.DEV
       ? (model: HandlingModel) => {
-          handling = new Handling(model, start);
+          handling = new Handling(model, start, assistance);
           car = handling.car;
           setState('title');
         }

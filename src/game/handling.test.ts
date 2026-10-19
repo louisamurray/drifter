@@ -149,3 +149,22 @@ describe('session handling adapter', () => {
     expect(h.car).toEqual(before);
   });
 });
+
+it.each(['legacy', 'force'] as const)(
+  'disables all automatic aids in reduced %s while preserving driver requests',
+  (model) => {
+    const reduced = new Handling(model, pose, 'reduced');
+    const noAids = new Handling(model, pose, 'reduced');
+    const assisted = new Handling(model, pose);
+    for (let i = 0; i < 180; i++) {
+      const input = { throttle: 1, steer: i < 120 ? 0.4 : 0, handbrake: false };
+      reduced.step(input, dt, { offTrack: false, roadYaw: 1, lift: 0.8, counterSteer: 1 });
+      noAids.step(input, dt, { offTrack: false, roadYaw: 0, lift: 0, counterSteer: 0 });
+      assisted.step(input, dt, { offTrack: false, roadYaw: 1, lift: 0.8, counterSteer: 1 });
+    }
+    closeCar(reduced.car, noAids.car);
+    expect(reduced.car.x).not.toBeCloseTo(assisted.car.x, 2);
+    expect(reduced.telemetry().speed).toBeGreaterThan(0);
+    expect(reduced.canSaveBest).toBe(false);
+  },
+);

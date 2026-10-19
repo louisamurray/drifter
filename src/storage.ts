@@ -1,3 +1,4 @@
+import { isAssistanceProfile, type AssistanceProfile } from './game/assistance';
 import { isControlScheme, type ControlScheme } from './core/input';
 import { isGameMode, type GameMode } from './core/mode';
 
@@ -60,5 +61,22 @@ export function saveScheme(scheme: ControlScheme): void {
     localStorage.setItem(CONTROLS_KEY, scheme);
   } catch {
     // As above: the choice simply does not persist.
+  }
+}
+
+export function loadAssistance(): AssistanceProfile {
+  try {
+    const value = localStorage.getItem('drifter.assistance');
+    return isAssistanceProfile(value) ? value : 'assisted';
+  } catch {
+    return 'assisted';
+  }
+}
+
+export function saveAssistance(profile: AssistanceProfile): void {
+  try {
+    localStorage.setItem('drifter.assistance', profile);
+  } catch {
+    /* Optional preference. */
   }
 }

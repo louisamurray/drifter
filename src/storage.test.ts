@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { loadBest, loadMode, loadScheme, saveBest, saveMode, saveScheme } from './storage';
+import {
+  loadAssistance,
+  saveAssistance,
+  loadBest,
+  loadMode,
+  loadScheme,
+  saveBest,
+  saveMode,
+  saveScheme,
+} from './storage';
 
 beforeEach(() => {
   localStorage.clear();
@@ -44,4 +53,14 @@ describe('control scheme storage', () => {
     saveScheme('thumb');
     expect(loadScheme()).toBe('thumb');
   });
+});
+
+it('persists assistance independently of the saved control scheme and rejects unknown profiles', () => {
+  expect(loadAssistance()).toBe('assisted');
+  saveScheme('thumb');
+  saveAssistance('reduced');
+  expect(loadAssistance()).toBe('reduced');
+  expect(loadScheme()).toBe('thumb');
+  localStorage.setItem('drifter.assistance', 'unknown');
+  expect(loadAssistance()).toBe('assisted');
 });

@@ -1,3 +1,4 @@
+import { isAssistanceProfile, type AssistanceProfile } from '../game/assistance';
 import {
   isControlScheme,
   ZONES,
@@ -51,6 +52,8 @@ export class Hud {
   private bests: Record<GameMode, number> = { track: 0, free: 0 };
   private scheme: ControlScheme = 'thumb';
 
+  onAssistance: ((profile: AssistanceProfile) => void) | null = null;
+
   onStart: (() => void) | null = null;
   onRestart: (() => void) | null = null;
   onResume: (() => void) | null = null;
@@ -83,6 +86,12 @@ export class Hud {
           <button class="chip controls-chip" data-act="controls" data-scheme="thumb">One thumb</button>
           <button class="chip controls-chip" data-act="controls" data-scheme="pedals">Two thumbs</button>
         </div>
+        <div class="assistance-toggle controls-toggle" role="group" aria-label="Assistance">
+          <button class="chip assistance-chip" data-act="assistance" data-profile="assisted">Assisted</button>
+          <button class="chip assistance-chip" data-act="assistance" data-profile="reduced">Reduced assistance</button>
+        </div>
+        <div class="assistance-description keyboard-hint"></div>
+        <div class="controller-hint keyboard-hint">Controller: left stick steers · RT gas · A/LT handbrake · Start drive/resume · B pause</div>
         <div class="hint"></div>
         <div class="title-cta"><span class="touch-only">Tap to drive</span><span class="keyboard-only">Enter to drive</span></div>
         <div class="keyboard-only keyboard-hint keyboard-driving"></div>
@@ -160,6 +169,7 @@ export class Hud {
     paused.innerHTML = `
       <div class="panel">
         <div class="panel-title">Paused</div>
+        <div class="assistance-status keyboard-hint"></div>
         <div class="keyboard-only keyboard-hint">Enter or Esc / P to resume</div>
         <button class="btn btn-primary" data-act="resume">Resume</button>
         <button class="btn" data-act="restart">Restart</button>
@@ -198,6 +208,7 @@ export class Hud {
 
     for (const s of this.screens.values()) this.root.append(s);
     this.setControls(this.scheme);
+    this.setAssistance('assisted');
   }
 
   /** Route a click to its action. Returns true if a button handled it. */
@@ -213,11 +224,31 @@ export class Hud {
     else if (act === 'mode') {
       const mode = target.closest<HTMLElement>('[data-mode]')?.dataset.mode;
       if (isGameMode(mode)) this.onMode?.(mode);
+    } else if (act === 'assistance') {
+      const profile = target.closest<HTMLElement>('[data-profile]')?.dataset.profile;
+      if (isAssistanceProfile(profile)) this.onAssistance?.(profile);
     } else if (act === 'controls') {
       const scheme = target.closest<HTMLElement>('[data-scheme]')?.dataset.scheme;
       if (isControlScheme(scheme)) this.onControls?.(scheme);
     } else return false;
     return true;
+  }
+
+  setAssistance(profile: AssistanceProfile): void {
+    for (const chip of this.root.querySelectorAll<HTMLElement>('.assistance-chip')) {
+      const selected = chip.dataset.profile === profile;
+      chip.classList.toggle('on', selected);
+      chip.setAttribute('aria-pressed', String(selected));
+    }
+    for (const description of this.root.querySelectorAll(
+      '.assistance-description, .assistance-status',
+    )) {
+      description.textContent =
+        profile === 'assisted'
+          ? 'Assisted: road following, automatic corner braking with auto-throttle, and countersteer.'
+          : 'Reduced assistance: no road following, automatic corner braking or countersteer. Best not saved.';
+      description.textContent += ' One thumb retains auto-throttle; controller uses RT.';
+    }
   }
 
   setSound(on: boolean): void {

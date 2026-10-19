@@ -800,3 +800,30 @@ body {
     display: none;
   }
 }
+
+.assistance-chip.on {
+  border-color: var(--cream);
+  background: var(--cream);
+  color: var(--asphalt);
+}
+.assistance-description,
+.controller-hint {
+  max-width: 64ch;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.controller-hint {
+  display: none;
+}
+@media (pointer: fine) {
+  .controller-hint {
+    display: block;
+  }
+}
+@media (max-height: 650px) {
+  .screen-title .title-foot {
+    max-height: 60vh;
+    overflow-y: auto;
+    gap: 8px;
+  }
+}
