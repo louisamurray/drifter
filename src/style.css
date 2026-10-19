@@ -827,3 +827,238 @@ body {
     gap: 8px;
   }
 }
+
+/* Activity rules, with menus that reflow instead of sitting over the car. */
+[hidden] {
+  display: none !important;
+}
+.title-cta {
+  font-family: inherit;
+  border: 0;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.title-cta:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.activity-chip.on {
+  background: var(--cream);
+  color: var(--asphalt);
+}
+.mode-toggle {
+  flex-wrap: wrap;
+  max-width: calc(100% - 110px);
+}
+.mode-toggle .chip,
+.controls-toggle .chip {
+  min-height: 44px;
+  height: auto;
+  padding-block: 10px;
+  line-height: 1.3;
+}
+.controls-toggle {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.screen-title {
+  overflow-y: auto;
+  cursor: default;
+}
+.screen-title.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.title-lockup {
+  position: relative;
+  inset: auto;
+  margin-top: max(100px, 14vh);
+  flex: 0 0 auto;
+}
+.title-foot {
+  position: relative;
+  inset: auto;
+  margin-top: auto;
+  width: min(640px, 100%);
+  gap: 10px;
+  padding-top: 24px;
+  padding-bottom: 12px;
+}
+.title-scrim {
+  height: 75%;
+}
+.screen-title .title-foot {
+  max-height: none;
+  overflow: visible;
+}
+.title-sub {
+  display: block;
+}
+.lesson-menu {
+  pointer-events: auto;
+  width: min(420px, 100%);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.lesson-menu summary {
+  cursor: pointer;
+  padding: 12px;
+}
+.lesson-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-block: 8px;
+}
+.lesson-option {
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 14px;
+  text-align: left;
+}
+.screen-paused {
+  overflow-y: auto;
+}
+.panel {
+  margin-block: auto;
+  padding-block: 16px;
+}
+.activity-bar {
+  display: none;
+  position: absolute;
+  top: calc(var(--sat) + 16px);
+  left: calc(var(--sal) + 16px);
+  right: calc(var(--sar) + 80px);
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+}
+.activity-bar .chip {
+  min-height: 44px;
+}
+.activity-feedback {
+  display: none;
+  position: absolute;
+  top: calc(var(--sat) + 84px);
+  left: calc(var(--sal) + 16px);
+  right: calc(var(--sar) + 16px);
+  max-width: 40ch;
+  padding: 12px;
+  background: var(--asphalt);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.activity-cue {
+  display: block;
+}
+.lesson-progress {
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin-block: 10px;
+  accent-color: var(--accent);
+}
+.lesson-leave {
+  margin-top: 10px;
+  min-height: 44px;
+}
+.hud:not([data-activity='timed']) .activity-bar {
+  display: flex;
+}
+.hud:not([data-activity='timed']) .activity-feedback {
+  display: block;
+}
+.hud:not([data-activity='timed']) :is(.hud-score, .hud-timer, .hud-mult, .hud-timebar) {
+  display: none;
+}
+.hud:not([data-activity='timed']) .hud-pause {
+  top: calc(var(--sat) + 16px);
+  left: auto;
+  right: calc(var(--sar) + 16px);
+  transform: none;
+  height: 44px;
+}
+.hud:not([data-activity='timed']) .title-best {
+  display: none;
+}
+.hud[data-activity='practice'] .over-score,
+.hud[data-activity='lesson'] .over-score {
+  font-size: clamp(30px, 7vw, 56px);
+}
+.challenge-breakdown,
+.result-reason,
+.result-identity,
+.share-status {
+  font-size: 12px;
+  line-height: 1.7;
+  max-width: 54ch;
+  margin-top: 10px;
+  text-wrap: pretty;
+}
+.result-reason {
+  font-size: 14px;
+}
+.result-identity {
+  color: var(--text-dim);
+}
+.over-top {
+  background: rgba(18, 23, 31, 0.92);
+  padding: 16px;
+}
+.screen-over {
+  overflow-y: auto;
+  gap: 24px;
+}
+.over-actions {
+  flex-shrink: 0;
+}
+@media (max-height: 550px) {
+  .title-lockup {
+    margin-top: 86px;
+  }
+  .title-foot {
+    padding-top: 0;
+  }
+  .title-logo {
+    font-size: 40px;
+  }
+  .activity-feedback {
+    top: calc(var(--sat) + 70px);
+    font-size: 12px;
+    padding: 8px;
+    max-width: 42ch;
+  }
+  .activity-feedback .lesson-leave {
+    margin-top: 4px;
+    min-height: 32px;
+  }
+  .screen-over.active {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .over-actions {
+    width: min(260px, 42%);
+  }
+  .over-top {
+    max-width: 48%;
+  }
+}
+@media (max-width: 370px) {
+  .mode-toggle {
+    max-width: calc(100% - 94px);
+    gap: 4px;
+  }
+  .mode-toggle .chip {
+    padding-inline: 8px;
+    font-size: 10px;
+  }
+  .title-lockup {
+    margin-top: 120px;
+  }
+  .title-tag {
+    line-height: 1.6;
+  }
+}

@@ -104,6 +104,31 @@ export class Handling {
     };
   }
 
+  /** Axle force / available grip. This is utilisation, not simulated wheel RPM. */
+  feedback(): { utilisation: number; wheelspin: number } {
+    if (this.model === 'legacy')
+      return {
+        utilisation: Math.min(
+          1,
+          Math.abs(this.telemetry().lateralSpeed) / config.juice.fullIntensityLateral,
+        ),
+        wheelspin: 0,
+      };
+    const v = this.vehicle;
+    return {
+      utilisation: Math.min(
+        1,
+        Math.max(
+          Math.abs(v.forceFrontY) /
+            Math.max(1, v.loadFront * STANDARD_VEHICLE.frontGrip),
+          Math.abs(v.forceRearY) /
+            Math.max(1, v.loadRear * STANDARD_VEHICLE.rearGrip),
+        ),
+      ),
+      wheelspin: Math.max(0, Math.min(1, v.wheelspin)),
+    };
+  }
+
   diagnostics(): string {
     if (this.model === 'legacy') return 'legacy · road yaw / corner lift';
     const v = this.vehicle;

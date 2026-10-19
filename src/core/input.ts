@@ -272,6 +272,7 @@ export class TouchControls {
   readonly stick = { x: 0, y: 0 };
 
   /** Called on Escape or P for desktop pause. */
+  onResetKey: (() => void) | null = null;
   onPauseKey: (() => void) | null = null;
 
   /** Called on Enter when no form control owns the key. */
@@ -296,7 +297,8 @@ export class TouchControls {
       return;
     }
     if (this.controller.active) this.source = 'controller';
-    if (edges.pause) this.onPauseKey?.();
+    if (edges.reset) this.onResetKey?.();
+    else if (edges.pause) this.onPauseKey?.();
     else if (edges.confirm) this.onConfirmKey?.();
   }
 
@@ -310,6 +312,7 @@ export class TouchControls {
 
   private readonly pointers = new Map<number, Touch>();
   private readonly keys = new Set<string>();
+  private readonly releasedKeys = new Set<string>();
 
   constructor(private readonly target: HTMLElement) {
     target.addEventListener('pointerdown', this.onDown);
@@ -402,6 +405,7 @@ export class TouchControls {
     this.stick.x = 0;
     this.stick.y = 0;
     this.pointers.clear();
+    for (const key of this.keys) this.releasedKeys.add(key);
     this.keys.clear();
     this.state.steer = 0;
     this.state.handbrake = false;
@@ -441,6 +445,7 @@ export class TouchControls {
     const key = e.key.toLowerCase();
     // Always release tracked keys, even if focus or modifiers changed while held.
     if (e.type === 'keyup') {
+      this.releasedKeys.delete(key);
       if (this.keys.delete(key)) e.preventDefault();
       return;
     }
@@ -450,18 +455,21 @@ export class TouchControls {
       e.metaKey ||
       e.altKey ||
       (target instanceof HTMLElement &&
-        (target.isContentEditable || target.closest('input, textarea, select, button, a[href]')))
+        (target.isContentEditable ||
+          (key !== 'escape' && target.closest('input, textarea, select, button, a[href]'))))
     )
       return;
-    if (key === 'escape' || key === 'p' || key === 'enter') {
+    if (key === 'escape' || key === 'p' || key === 'enter' || key === 'r') {
       e.preventDefault();
       if (!e.repeat) {
-        if (key === 'enter') this.onConfirmKey?.();
+        if (key === 'r') this.onResetKey?.();
+        else if (key === 'enter') this.onConfirmKey?.();
         else this.onPauseKey?.();
       }
       return;
     }
     if (!KEYS.has(key)) return;
+    if (this.releasedKeys.has(key) || (e.repeat && !this.keys.has(key))) return;
     e.preventDefault();
     this.takeOver('keyboard');
     this.keys.add(key);

@@ -48,3 +48,11 @@ describe('controller', () => {
     expect(c.poll([]).disconnected).toBe(false);
   });
 });
+
+it('edge-triggers Y reset and requires release after session reset',()=>{
+  const c=new Controller();c.poll([pad()]);
+  expect(c.poll([pad(0,0,0,[3])]).reset).toBe(true);
+  expect(c.poll([pad(0,0,0,[3])]).reset).toBe(false);
+  c.reset();expect(c.poll([pad(0,0,0,[3])]).reset).toBe(false);
+  c.poll([pad()]);expect(c.poll([pad(0,0,0,[3])]).reset).toBe(true);
+});

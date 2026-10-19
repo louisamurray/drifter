@@ -23,6 +23,7 @@ export interface AudioTelemetry {
   /** 0..1 slide intensity, as used for skids and smoke. */
   slide: number;
   offTrack: boolean;
+  wheelspin?: number;
 }
 
 const MUTE_KEY = 'drifter.muted';
@@ -121,7 +122,7 @@ export class AudioEngine {
   update(t: AudioTelemetry): void {
     if (!this.ctx || !this.engineOn) return;
     const now = this.ctx.currentTime;
-    const f = engineFrequency(t.speedRatio, t.drifting, t.handbrake);
+    const f = engineFrequency(t.speedRatio, t.drifting, t.handbrake, t.wheelspin);
     this.engineOscs[0]?.frequency.setTargetAtTime(f, now, SMOOTH);
     this.engineOscs[1]?.frequency.setTargetAtTime(f / 2, now, SMOOTH);
     this.engineOscs[2]?.frequency.setTargetAtTime(f * 1.007, now, SMOOTH);

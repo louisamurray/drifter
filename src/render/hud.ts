@@ -1,3 +1,7 @@
+import type { Activity, LessonId } from '../game/session';
+import { LESSONS } from '../game/lessons';
+import type { ChallengeState } from '../game/challenge';
+import { challengeTotal } from '../game/challenge';
 import { isAssistanceProfile, type AssistanceProfile } from '../game/assistance';
 import {
   isControlScheme,
@@ -48,6 +52,14 @@ export class Hud {
   private readonly overTopEl: HTMLElement;
   private readonly overActionsEl: HTMLElement;
   private readonly shareBtn: HTMLButtonElement;
+  private activity: Activity = 'timed';
+  private lesson: LessonId | null = null;
+  onActivity: ((activity: Activity) => void) | null = null;
+  onLesson: ((id: LessonId) => void) | null = null;
+  onReset: (() => void) | null = null;
+  onExit: (() => void) | null = null;
+  onTitle: (() => void) | null = null;
+  onLeaveLesson: (() => void) | null = null;
   private mode: GameMode = 'track';
   private bests: Record<GameMode, number> = { track: 0, free: 0 };
   private scheme: ControlScheme = 'thumb';
@@ -75,6 +87,8 @@ export class Hud {
       <div class="mode-toggle" role="group" aria-label="Mode">
         <button class="chip mode-chip" data-act="mode" data-mode="track">Circuit</button>
         <button class="chip mode-chip" data-act="mode" data-mode="free">Free drift</button>
+        <button class="chip activity-chip" data-act="activity" data-activity="practice">Practice</button>
+        <button class="chip activity-chip" data-act="activity" data-activity="challenge">Challenge</button>
       </div>
       <div class="title-lockup">
         <div class="title-logo">DRIFTER</div>
@@ -91,11 +105,12 @@ export class Hud {
           <button class="chip assistance-chip" data-act="assistance" data-profile="reduced">Reduced assistance</button>
         </div>
         <div class="assistance-description keyboard-hint"></div>
-        <div class="controller-hint keyboard-hint">Controller: left stick steers · RT gas · A/LT handbrake · Start drive/resume · B pause</div>
+        <div class="controller-hint keyboard-hint">Controller: left stick steers · RT gas · A/LT handbrake · Start drive/resume · B pause · Y reset</div>
         <div class="hint"></div>
-        <div class="title-cta"><span class="touch-only">Tap to drive</span><span class="keyboard-only">Enter to drive</span></div>
+        <button class="title-cta" data-act="start"><span class="touch-only">Tap to drive</span><span class="keyboard-only">Enter to drive</span></button>
         <div class="keyboard-only keyboard-hint keyboard-driving"></div>
         <div class="title-sub"></div>
+        <details class="lesson-menu"><summary>Optional lessons</summary><div class="lesson-options"></div></details>
         <div class="title-best"></div>
         <div class="title-install">Add to Home Screen to play full screen</div>
       </div>`;
@@ -130,6 +145,8 @@ export class Hud {
         <div class="stick"><div class="stick-knob"></div></div>
       </div>
       <div class="keyboard-only keyboard-hint keyboard-playing keyboard-driving"></div>
+      <div class="activity-bar"><span class="activity-name"></span><button class="chip" data-act="reset">Reset</button></div>
+      <div class="activity-feedback" role="status" aria-live="polite"><span class="activity-cue"></span><progress class="lesson-progress" max="1" value="0" aria-label="Lesson progress"></progress><button class="chip lesson-leave" data-act="leave-lesson">Free practice</button></div>
       <div class="hud-timebar"></div>
       <div class="hud-score"><span class="label">score</span><span class="value">0</span></div>
       <div class="hud-timer">60.0</div>
@@ -173,6 +190,10 @@ export class Hud {
         <div class="keyboard-only keyboard-hint">Enter or Esc / P to resume</div>
         <button class="btn btn-primary" data-act="resume">Resume</button>
         <button class="btn" data-act="restart">Restart</button>
+        <button class="btn paused-leave-lesson" data-act="leave-lesson">Free practice</button>
+        <button class="btn practice-exit" data-act="exit">End practice</button>
+        <button class="btn btn-quiet" data-act="title">Back to title</button>
+        <details class="lesson-menu"><summary>Optional lessons</summary><div class="lesson-options"></div></details>
         <button class="btn btn-quiet" data-act="sound">Sound on</button>
       </div>`;
     paused.addEventListener('click', (e) => {
@@ -188,11 +209,16 @@ export class Hud {
         <div class="over-newbest">New best</div>
         <div class="over-score">0</div>
         <div class="over-best">Best 0</div>
+        <div class="challenge-breakdown"></div>
+        <div class="result-reason"></div>
+        <div class="result-identity"></div>
       </div>
       <div class="over-actions">
         <div class="keyboard-only keyboard-hint">Enter to drive again</div>
         <button class="btn btn-primary btn-large" data-act="restart">Drive again</button>
-        <button class="btn" data-act="share">Share</button>
+        <button class="btn btn-quiet" data-act="title">Back to title</button>
+        <button class="btn" data-act="share">Share drawing</button>
+        <div class="share-status" role="status"></div>
       </div>`;
     over.addEventListener('click', (e) => {
       this.dispatch(e);
@@ -203,10 +229,21 @@ export class Hud {
     this.finalBestEl = must(over.querySelector('.over-best'));
     this.newBestEl = must(over.querySelector('.over-newbest'));
     this.shareBtn = must(over.querySelector('[data-act="share"]'));
-    if (!('share' in navigator)) this.shareBtn.hidden = true;
+    this.shareBtn.textContent =
+      typeof navigator.share === 'function' ? 'Share drawing' : 'Download drawing';
     this.screens.set('gameover', over);
 
     for (const s of this.screens.values()) this.root.append(s);
+    for (const options of this.root.querySelectorAll('.lesson-options')) {
+      for (const id of Object.keys(LESSONS) as LessonId[]) {
+        const button = el('button', 'btn lesson-option');
+        button.dataset.act = 'lesson';
+        button.dataset.lesson = id;
+        button.textContent = `${LESSONS[id].name} — ${LESSONS[id].objective}`;
+        options.append(button);
+      }
+    }
+    this.setActivity('timed');
     this.setControls(this.scheme);
     this.setAssistance('assisted');
   }
@@ -214,9 +251,21 @@ export class Hud {
   /** Route a click to its action. Returns true if a button handled it. */
   private dispatch(e: Event): boolean {
     const target = e.target;
-    if (!(target instanceof HTMLElement)) return false;
+    if (!(target instanceof Element)) return false;
+    if (target.closest('details') && !target.closest('[data-act]')) return true;
     const act = target.closest<HTMLElement>('[data-act]')?.dataset.act;
-    if (act === 'resume') this.onResume?.();
+    if (act === 'start') this.onStart?.();
+    else if (act === 'activity') {
+      const activity = target.closest<HTMLElement>('[data-activity]')?.dataset.activity;
+      if (activity === 'practice' || activity === 'challenge') this.onActivity?.(activity);
+    } else if (act === 'lesson') {
+      const id = target.closest<HTMLElement>('[data-lesson]')?.dataset.lesson;
+      if (id === 'initiate' || id === 'sustain' || id === 'transition') this.onLesson?.(id);
+    } else if (act === 'reset') this.onReset?.();
+    else if (act === 'exit') this.onExit?.();
+    else if (act === 'title') this.onTitle?.();
+    else if (act === 'leave-lesson') this.onLeaveLesson?.();
+    else if (act === 'resume') this.onResume?.();
     else if (act === 'restart') this.onRestart?.();
     else if (act === 'share') this.onShare?.();
     else if (act === 'pause') this.onPause?.();
@@ -245,7 +294,9 @@ export class Hud {
     )) {
       description.textContent =
         profile === 'assisted'
-          ? 'Assisted: road following, automatic corner braking with auto-throttle, and countersteer.'
+          ? this.activity === 'timed' && this.mode === 'track'
+            ? 'Assisted: road following, corner braking with automatic gas, and countersteer.'
+            : 'Assisted: helps catch slides with countersteer. The lot has no road-following or corner braking.'
           : 'Reduced assistance: no road following, automatic corner braking or countersteer. Best not saved.';
       description.textContent += ' One thumb retains auto-throttle; controller uses RT.';
     }
@@ -296,12 +347,30 @@ export class Hud {
     );
     this.zonesEl.replaceChildren(...this.zoneEls.values());
     for (const hint of this.root.querySelectorAll('.keyboard-driving')) {
-      hint.textContent = `A/D or Left/Right to steer · ${scheme === 'pedals' ? 'W/Up for gas' : 'Auto accelerate'} · Space or S/Down for handbrake · Esc/P to pause`;
+      hint.textContent = `A/D or Left/Right to steer · ${scheme === 'pedals' ? 'W/Up for gas' : 'Auto accelerate'} · Space or S/Down for handbrake · Esc/P to pause · R reset in practice/challenge`;
     }
     this.refreshTitleText();
   }
 
   private refreshTitleText(): void {
+    if (this.activity !== 'timed') {
+      this.titleTagEl.textContent =
+        this.activity === 'challenge' ? 'Two corners. One linked slide.' : 'Your pace. No timer.';
+      this.titleSubEl.textContent = this.lesson
+        ? LESSONS[this.lesson].objective
+        : this.activity === 'challenge'
+          ? 'Follow the targets in order. Scored on line, angle and transition.'
+          : 'Build speed, start a slide, then catch it. Reset any time.';
+      const button = must(this.root.querySelector('.title-cta'));
+      button.textContent = this.lesson
+        ? `Start ${LESSONS[this.lesson].name}`
+        : this.activity === 'challenge'
+          ? 'Start challenge'
+          : 'Start practice';
+      return;
+    }
+    must(this.root.querySelector('.title-cta')).innerHTML =
+      '<span class="touch-only">Tap to drive</span><span class="keyboard-only">Enter to drive</span>';
     const where = this.mode === 'free' ? 'An open lot and nothing to follow. ' : '';
     const how =
       this.scheme === 'thumb'
@@ -312,8 +381,11 @@ export class Hud {
   }
 
   show(state: GameState): void {
+    if (document.activeElement instanceof HTMLElement && this.root.contains(document.activeElement))
+      document.activeElement.blur();
     for (const [name, screen] of this.screens) {
       screen.classList.toggle('active', name === state);
+      screen.inert = name !== state;
     }
   }
 
@@ -420,11 +492,106 @@ export class Hud {
   }
 
   setGameOver(score: number, best: number, isNewBest: boolean, competitive = true): void {
+    must(this.root.querySelector('.challenge-breakdown')).textContent = '';
+    must(this.root.querySelector('.result-reason')).textContent = '';
+    must(this.root.querySelector('.result-identity')).textContent = '';
     this.finalScoreEl.textContent = fmtScore(score);
     this.finalBestEl.textContent = competitive
       ? `${MODE_NAME[this.mode]} best ${fmtScore(best)}`
       : 'Handling prototype · best not saved';
     this.newBestEl.classList.toggle('show', competitive && isNewBest);
+  }
+
+  setActivity(activity: Activity, lesson: LessonId | null = null): void {
+    this.activity = activity;
+    this.lesson = lesson;
+    this.root.dataset.activity = activity;
+    for (const chip of this.modeChips) {
+      const selected = activity === 'timed' && chip.dataset.mode === this.mode;
+      chip.classList.toggle('on', selected);
+      chip.setAttribute('aria-pressed', String(selected));
+    }
+    for (const chip of this.root.querySelectorAll<HTMLElement>('.activity-chip')) {
+      const selected =
+        chip.dataset.activity === activity ||
+        (activity === 'lesson' && chip.dataset.activity === 'practice');
+      chip.classList.toggle('on', selected);
+      chip.setAttribute('aria-pressed', String(selected));
+    }
+    for (const menu of this.root.querySelectorAll<HTMLDetailsElement>('.lesson-menu')) {
+      menu.hidden = activity === 'timed' || activity === 'challenge';
+      menu.open = false;
+    }
+    must(this.root.querySelector('.activity-name')).textContent = lesson
+      ? LESSONS[lesson].name
+      : activity === 'challenge'
+        ? 'Challenge'
+        : 'Practice';
+    must(this.root.querySelector('.activity-cue')).textContent = lesson
+      ? LESSONS[lesson].objective
+      : 'Build speed, steer into a slide, then countersteer to catch it.';
+    must(this.root.querySelector<HTMLElement>('.lesson-progress')).hidden = activity !== 'lesson';
+    must(this.root.querySelector<HTMLElement>('.lesson-leave')).hidden = activity !== 'lesson';
+    must(this.root.querySelector<HTMLElement>('.paused-leave-lesson')).hidden =
+      activity !== 'lesson';
+    must(this.root.querySelector('.panel-title')).textContent = 'Paused';
+    must(this.root.querySelector<HTMLElement>('.practice-exit')).hidden = activity === 'timed';
+    must(this.root.querySelector<HTMLElement>('.practice-exit')).textContent =
+      activity === 'challenge' ? 'Finish attempt' : 'End practice';
+    must(this.root.querySelector('.screen-paused [data-act="restart"]')).textContent =
+      activity === 'timed' ? 'Restart' : 'Reset';
+    must(this.root.querySelector('.screen-over [data-act="restart"]')).textContent =
+      activity === 'timed'
+        ? 'Drive again'
+        : activity === 'challenge'
+          ? 'Retry challenge'
+          : 'Practice again';
+    this.refreshTitleText();
+  }
+
+  setActivityFeedback(cue: string, progress = 0): void {
+    const text = must(this.root.querySelector('.activity-cue'));
+    if (text.textContent !== cue) text.textContent = cue;
+    const bar = this.root.querySelector<HTMLProgressElement>('.lesson-progress');
+    if (bar) bar.value = Math.min(1, Math.max(0, progress));
+  }
+
+  setPracticeOverview(): void {
+    this.setGameOver(0, 0, false, false);
+    this.finalScoreEl.textContent = 'Your practice';
+    this.finalBestEl.textContent = 'No timer. No score. Just your rubber.';
+    must(this.root.querySelector('.share-status')).textContent = '';
+  }
+
+  setChallengeResults(
+    result: ChallengeState,
+    best: number,
+    saved: boolean,
+    identity: string,
+  ): void {
+    this.setGameOver(challengeTotal(result), best, saved && challengeTotal(result) > best, false);
+    this.finalBestEl.textContent = saved
+      ? `Best for this setup ${fmtScore(Math.max(best, challengeTotal(result)))}`
+      : best > 0
+        ? `Previous best ${fmtScore(best)} · this attempt not saved`
+        : 'No best saved for this setup';
+    this.newBestEl.classList.toggle('show', saved && challengeTotal(result) > best);
+    must(this.root.querySelector('.challenge-breakdown')).textContent =
+      `Line ${fmtScore(result.line)} + Angle ${fmtScore(result.angle)} + Transition ${fmtScore(result.transition)}`;
+    must(this.root.querySelector('.result-reason')).textContent =
+      result.reason || 'Clean link. Carry the same control into your next attempt.';
+    must(this.root.querySelector('.result-identity')).textContent = identity;
+    must(this.root.querySelector('.share-status')).textContent = saved
+      ? 'Best saved for this setup.'
+      : 'Result kept here. Saving unavailable or this attempt is not eligible.';
+  }
+
+  setLessonComplete(): void {
+    must(this.root.querySelector('.panel-title')).textContent = 'Lesson complete';
+  }
+
+  setShareStatus(text: string): void {
+    must(this.root.querySelector('.share-status')).textContent = text;
   }
 
   private punch(target: HTMLElement | null): void {

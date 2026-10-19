@@ -7,12 +7,17 @@ export const ENGINE_IDLE_HZ = 58;
 export const ENGINE_TOP_HZ = 215;
 
 /** Engine fundamental from speed ratio (0..1). Wheelspin in a drift pushes it up. */
-export function engineFrequency(speedRatio: number, drifting: boolean, handbrake: boolean): number {
+export function engineFrequency(
+  speedRatio: number,
+  drifting: boolean,
+  handbrake: boolean,
+  wheelspin = 0,
+): number {
   const r = Math.min(1, Math.max(0, speedRatio));
   let f = ENGINE_IDLE_HZ + (ENGINE_TOP_HZ - ENGINE_IDLE_HZ) * Math.pow(r, 0.85);
   if (drifting) f *= 1.12;
   if (handbrake) f *= 0.94;
-  return f;
+  return f * (1 + 0.06 * Math.min(1, Math.max(0, wheelspin)));
 }
 
 /** Engine loudness: present at idle, fuller under power, slightly eased on the handbrake. */

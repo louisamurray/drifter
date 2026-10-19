@@ -35,3 +35,10 @@ describe('audio mapping', () => {
     expect(bankRootHz(1e9)).toBeCloseTo(bankRootHz(1e4));
   });
 });
+
+it('keeps approximate wheelspin a bounded engine cue, independent of handbrake',()=>{
+  const idle=engineFrequency(0.5,false,false);
+  expect(engineFrequency(0.5,false,false,1)).toBeCloseTo(idle*1.06);
+  expect(engineFrequency(0.5,false,false,100)).toBe(engineFrequency(0.5,false,false,1));
+  expect(engineFrequency(0.5,false,false,-1)).toBe(idle);
+});

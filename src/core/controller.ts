@@ -32,6 +32,7 @@ export class Controller {
   private armed = false;
   private confirm = false;
   private pause = false;
+  private resetHeld = false;
   controls: RawControls = { ...NEUTRAL };
   active = false;
 
@@ -41,12 +42,14 @@ export class Controller {
     this.controls = { ...NEUTRAL };
     this.confirm = false;
     this.pause = false;
+    this.resetHeld = false;
   }
 
   poll(pads: readonly (Gamepad | null)[]): {
     confirm: boolean;
     pause: boolean;
     disconnected: boolean;
+    reset: boolean;
   } {
     const previous = this.index;
     const selected = pads.find(
@@ -57,24 +60,36 @@ export class Controller {
     if (!pad) {
       this.index = null;
       this.reset();
-      return { confirm: false, pause: false, disconnected };
+      return { confirm: false, pause: false, reset: false, disconnected };
     }
     if (pad.index !== previous) this.reset();
     this.index = pad.index;
     const controls = controllerControls(pad);
     const confirm = !!pad.buttons[9]?.pressed;
     const pause = !!pad.buttons[1]?.pressed;
+    const reset = !!pad.buttons[3]?.pressed;
     const engaged =
-      controls.steer !== 0 || controls.throttle !== 0 || controls.handbrake || confirm || pause;
+      controls.steer !== 0 ||
+      controls.throttle !== 0 ||
+      controls.handbrake ||
+      confirm ||
+      pause ||
+      reset;
     if (!this.armed) {
       this.armed = !engaged;
-      return { confirm: false, pause: false, disconnected };
+      return { confirm: false, pause: false, reset: false, disconnected };
     }
     this.controls = controls;
     if (engaged) this.active = true;
-    const edges = { confirm: confirm && !this.confirm, pause: pause && !this.pause, disconnected };
+    const edges = {
+      confirm: confirm && !this.confirm,
+      pause: pause && !this.pause,
+      reset: reset && !this.resetHeld,
+      disconnected,
+    };
     this.confirm = confirm;
     this.pause = pause;
+    this.resetHeld = reset;
     return edges;
   }
 }

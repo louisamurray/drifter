@@ -1,3 +1,15 @@
+import { createSession, type Activity, type LessonId } from './game/session';
+import { lessonEight, createLesson, updateLesson, LESSONS, type Observation } from './game/lessons';
+import {
+  CHALLENGE_REVISION,
+  CHALLENGE_GATES,
+  CHALLENGE_SPAWN,
+  createChallenge,
+  updateChallenge,
+  challengeTotal,
+  pathPoint,
+} from './game/challenge';
+import { loadRecord, saveRecord, type RecordIdentity } from './storage';
 import './style.css';
 import { ASSISTANCE, type AssistanceProfile } from './game/assistance';
 import { config } from './config';
@@ -89,7 +101,13 @@ const lot = config.lot;
  * the car but the player.
  */
 let mode: GameMode = loadMode();
+let session = createSession('timed', mode);
+let lessonState = createLesson('initiate');
+let challenge = createChallenge();
+const sources = new Set<string>();
 let start = startFor(mode);
+let timedModel: HandlingModel = 'legacy';
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 /** One thumb with automatic throttle, or two thumbs with a gas column. Only the player drives manually. */
 let scheme: ControlScheme = loadScheme();
 input.scheme = scheme;
@@ -162,6 +180,18 @@ let state: GameState = 'title';
 
 function resetRun(): void {
   handling.reset(start);
+  sources.clear();
+  challenge = createChallenge();
+  lessonState = createLesson(session.lesson ?? 'initiate');
+  if (session.activity !== 'timed')
+    hud.setActivityFeedback(
+      session.lesson
+        ? LESSONS[session.lesson].objective
+        : session.activity === 'challenge'
+          ? 'Cross Start, then follow the targets in order. First corner turns left.'
+          : 'Build speed, start a slide, then countersteer to catch it.',
+    );
+  audio.stopEngine(0);
   usedController = false;
   lastControl = { steer: 0, throttle: 0, handbrake: false };
   Object.assign(carLook, { steer: 0, roll: 0, brake: 0 });
@@ -206,6 +236,30 @@ function setState(next: GameState): void {
   } else if (next === 'gameover') {
     input.reset();
     audio.stopEngine(1.2);
+    if (session.activity === 'practice' || session.activity === 'lesson') {
+      hud.setPracticeOverview();
+      return;
+    }
+    if (session.activity === 'challenge') {
+      const identity = challengeIdentity();
+      const previousBest = loadRecord(identity);
+      const eligible =
+        challenge.finished &&
+        challenge.next === CHALLENGE_GATES.length &&
+        sources.size === 1 &&
+        !debug;
+      const saved =
+        eligible &&
+        (challengeTotal(challenge) <= previousBest ||
+          saveRecord(identity, challengeTotal(challenge)));
+      hud.setChallengeResults(
+        challenge,
+        previousBest,
+        saved,
+        `${assistance === 'assisted' ? 'Assisted' : 'Reduced assistance'} · ${identity.controls} · ${CHALLENGE_REVISION} · force-1 / precision-1`,
+      );
+      return;
+    }
     newBest = canSaveBest() && score.score > bests[mode];
     if (newBest) {
       bests[mode] = score.score;
@@ -227,13 +281,53 @@ function setScheme(next: ControlScheme): void {
 
 /** Switch course from the title screen. Each mode keeps its own best. */
 function setMode(next: GameMode): void {
-  if (next === mode) return;
+  if (next === mode && session.activity === 'timed') return;
+  session = createSession('timed', next);
   mode = next;
+  handling = new Handling(timedModel, startFor(mode), assistance);
+  car = handling.car;
   saveMode(mode);
   start = startFor(mode);
   skids = skidsFor(mode);
   hud.setMode(mode);
+  hud.setActivity('timed');
+
+  hud.setAssistance(assistance);
   setState('title');
+}
+
+function challengeIdentity(): RecordIdentity {
+  return {
+    physics: 'force-1',
+    scoring: 'precision-1',
+    course: CHALLENGE_REVISION,
+    assistance,
+    controls: [...sources].sort().join('+') || `${input.source}-${scheme}`,
+  };
+}
+
+function selectActivity(activity: Activity, lesson: LessonId | null = null): void {
+  session = createSession(activity, mode, lesson);
+  mode = session.course;
+  start =
+    activity === 'challenge' ? CHALLENGE_SPAWN : lesson ? LESSONS[lesson].spawn : startFor(mode);
+  handling = new Handling(session.model, start, assistance);
+  car = handling.car;
+  skids = skidsFor(mode);
+  hud.setMode(mode);
+  hud.setActivity(activity, lesson);
+  hud.setAssistance(assistance);
+  setState('title');
+}
+
+function startActivity(): void {
+  audio.unlock();
+  if (session.activity === 'timed') setState('countdown');
+  else {
+    resetRun();
+    setState('playing');
+    audio.startEngine();
+  }
 }
 
 hud.setAssistance(assistance);
@@ -253,10 +347,7 @@ hud.setMode(mode);
 hud.onMode = setMode;
 hud.setControls(scheme);
 hud.onControls = setScheme;
-hud.onStart = () => {
-  audio.unlock();
-  setState('countdown');
-};
+hud.onStart = startActivity;
 hud.onSound = () => {
   audio.unlock();
   hud.setSound(!audio.toggleMuted());
@@ -271,8 +362,33 @@ for (const type of ['pointerdown', 'pointerup', 'touchend'] as const) {
     { passive: true },
   );
 }
-hud.onRestart = () => {
-  setState('countdown');
+hud.onRestart = startActivity;
+hud.onReset = () => {
+  if (
+    session.activity !== 'timed' &&
+    (state === 'playing' || state === 'paused' || state === 'gameover')
+  )
+    startActivity();
+};
+input.onResetKey = () => hud.onReset?.();
+hud.onExit = () => {
+  if (state === 'paused' && session.activity !== 'timed') setState('gameover');
+};
+hud.onTitle = () => {
+  setState('title');
+};
+hud.onActivity = (activity) => {
+  selectActivity(activity);
+};
+hud.onLesson = (id) => {
+  selectActivity('lesson', id);
+};
+hud.onLeaveLesson = () => {
+  if (session.activity !== 'lesson') return;
+  session = createSession('practice', 'free');
+  hud.setActivity('practice');
+  input.reset();
+  if (state === 'paused') setState('playing');
 };
 hud.onResume = () => {
   input.reset();
@@ -296,19 +412,42 @@ input.onPauseKey = () => {
 
 async function share(): Promise<void> {
   const where = mode === 'track' ? 'in Drifter' : "in Drifter's open lot";
-  const text = canSaveBest()
-    ? `I scored ${fmtScore(score.score)} ${where}. Can you beat it?`
-    : `Handling prototype ${where} · experimental score ${fmtScore(score.score)}`;
+  const text =
+    session.activity === 'practice' || session.activity === 'lesson'
+      ? 'My practice drawing in Drifter.'
+      : session.activity === 'challenge'
+        ? `Drifter challenge: ${fmtScore(challengeTotal(challenge))} · ${assistance} · ${CHALLENGE_REVISION}`
+        : canSaveBest()
+          ? `I scored ${fmtScore(score.score)} ${where}. Can you beat it?`
+          : `Handling prototype ${where}`;
   const url = location.origin + location.pathname;
   try {
     const file = await captureFrame();
-    if (file && navigator.canShare({ files: [file] })) {
-      await navigator.share({ title: 'Drifter', text, files: [file] });
-      return;
-    }
-    await navigator.share({ title: 'Drifter', text, url });
-  } catch {
-    // Cancelled or unsupported; nothing to do
+    if (typeof navigator.share === 'function') {
+      if (file && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] }))
+        await navigator.share({ title: 'Drifter', text, files: [file] });
+      else await navigator.share({ title: 'Drifter', text, url });
+      hud.setShareStatus('Drawing shared.');
+    } else if (file) {
+      const href = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = href;
+      link.download = 'drifter.png';
+      link.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(href);
+      }, 1000);
+      hud.setShareStatus('Drawing downloaded. Your result stays here.');
+    } else
+      hud.setShareStatus(
+        'Could not capture the drawing. Retry and Back to title are still available.',
+      );
+  } catch (error) {
+    hud.setShareStatus(
+      error instanceof DOMException && error.name === 'AbortError'
+        ? 'Share cancelled. Your result stays here.'
+        : 'Sharing unavailable. Your result stays here; try again.',
+    );
   }
 }
 
@@ -364,11 +503,15 @@ function stepPhysics(dt: number, ctl: InputState, manual = false, pointed = fals
     throttle: ctl.throttle,
     drifting: car.drifting,
     handbrake: ctl.handbrake,
-    slide: Math.min(1, Math.abs(t.lateralSpeed) / config.juice.fullIntensityLateral),
+    slide:
+      handling.model === 'force'
+        ? handling.feedback().utilisation
+        : Math.min(1, Math.abs(t.lateralSpeed) / config.juice.fullIntensityLateral),
+    wheelspin: handling.feedback().wheelspin,
     offTrack,
   });
 
-  if (state === 'playing') {
+  if (state === 'playing' && session.activity === 'timed') {
     updateScore(
       score,
       {
@@ -383,6 +526,39 @@ function stepPhysics(dt: number, ctl: InputState, manual = false, pointed = fals
     );
     handleScoreEvents();
     if (score.finished) setState('gameover');
+  }
+  if (state === 'playing' && session.activity !== 'timed') {
+    const observation: Observation = {
+      x: car.x,
+      y: car.y,
+      speed: t.speed,
+      forwardSpeed: t.forwardSpeed,
+      slipAngle: t.slipAngle,
+      yawRate: car.yawRate,
+      offTrack,
+    };
+    if (session.activity === 'lesson' && session.lesson) {
+      const wasComplete = lessonState.complete;
+      updateLesson(lessonState, session.lesson, observation, dt);
+      hud.setActivityFeedback(
+        lessonState.cue,
+        lessonState.complete ? 1 : lessonState.held / LESSONS[session.lesson].duration,
+      );
+      if (lessonState.complete && !wasComplete) {
+        setState('paused');
+        hud.setLessonComplete();
+      }
+    } else if (session.activity === 'challenge') {
+      updateChallenge(challenge, observation, dt);
+      const target = CHALLENGE_GATES[challenge.next];
+      hud.setActivityFeedback(
+        challenge.reason ||
+          (target
+            ? `Next: ${target.label}${challenge.next < 3 ? ' · slide left' : ' · slide right'}`
+            : 'Sequence complete'),
+      );
+      if (challenge.finished) setState('gameover');
+    }
   }
   updateCamera(camera, car, t.speed, dt, handling.referenceSpeed);
 }
@@ -412,11 +588,12 @@ function handleScoreEvents(): void {
     if (e.type === 'bank') {
       popups.push(popup(`+${fmtScore(e.amount)}`, cx, cy - 70, config.palette.hudText, 34));
       const j = config.juice;
-      triggerShake(
-        shake,
-        bankShakeAmplitude(e.amount, j.shakeBase, j.shakePerDecade, j.shakeMax),
-        j.shakeDuration,
-      );
+      if (!reducedMotion.matches)
+        triggerShake(
+          shake,
+          bankShakeAmplitude(e.amount, j.shakeBase, j.shakePerDecade, j.shakeMax),
+          j.shakeDuration,
+        );
       haptic(20);
     } else if (e.type === 'lost') {
       popups.push(
@@ -445,7 +622,8 @@ function update(dt: number): void {
   input.pollController();
   switch (state) {
     case 'title': {
-      stepPhysics(dt, ghostInput(dt));
+      // Title drivers remain calibrated to legacy handling, independently of the selected activity.
+      if (handling.model === 'legacy') stepPhysics(dt, ghostInput(dt));
       break;
     }
     case 'countdown': {
@@ -487,6 +665,7 @@ function update(dt: number): void {
             force ? config.input.force.throttleSeconds : config.input.throttleSeconds,
             force ? config.input.force.throttleReleaseSeconds : 0,
           );
+      sources.add(input.source === 'controller' ? 'controller' : `${input.source}-${scheme}`);
       stepPhysics(dt, ctl, manual, manual && input.held.stick);
       // Hold cues stay up for a new player until their first lap, or first banked chain on the lot
       const learning =
@@ -523,6 +702,47 @@ function update(dt: number): void {
 
 // ---- Rendering ------------------------------------------------------------
 
+function drawTargets(): void {
+  ctx.save();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = config.palette.edgeLine;
+  ctx.globalAlpha = 0.35;
+  ctx.setLineDash([16, 18]);
+  ctx.beginPath();
+  for (let i = 0; i <= 100; i++) {
+    const p =
+      session.activity === 'lesson' ? lessonEight((i / 100) * Math.PI * 2) : pathPoint(i / 100);
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  if (session.activity === 'lesson') {
+    ctx.fillStyle = config.palette.accent;
+    ctx.font = '18px Archivo Expanded, sans-serif';
+    ctx.fillText('Switch · left to right', 24, 176);
+    ctx.restore();
+    return;
+  }
+  for (const [i, g] of CHALLENGE_GATES.entries()) {
+    const zone = challenge.zones[i];
+    ctx.strokeStyle = i === challenge.next ? config.palette.accent : config.palette.edgeLine;
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.setLineDash(zone === 'complete' ? [] : [12, 10]);
+    ctx.beginPath();
+    ctx.moveTo(g.x - g.ny * g.halfWidth, g.y + g.nx * g.halfWidth);
+    ctx.lineTo(g.x + g.ny * g.halfWidth, g.y - g.nx * g.halfWidth);
+    ctx.stroke();
+    ctx.font = '18px Archivo Expanded, sans-serif';
+    ctx.fillText(
+      `${String(i + 1)} ${g.label}${zone === 'complete' ? ' · Done' : zone === 'missed' ? ' · Missed' : ''}`,
+      g.x + 24,
+      g.y - 24,
+    );
+  }
+  ctx.restore();
+}
+
 let frames = 0;
 let fpsWindowStart = performance.now();
 let fps = 0;
@@ -548,6 +768,11 @@ function render(alpha: number): void {
   if (mode === 'track') drawTrack(ctx, track);
   else drawLot(ctx, lot);
   skids.draw(ctx);
+  if (
+    session.activity === 'challenge' ||
+    (session.activity === 'lesson' && session.lesson === 'transition')
+  )
+    drawTargets();
   drawSmoke(ctx, smoke);
   drawCar(ctx, x, y, heading, carLook);
   endWorld(ctx);
@@ -555,14 +780,15 @@ function render(alpha: number): void {
   if (state === 'playing') {
     const sx = width / 2 + (x - camera.x) * camera.zoom;
     const sy = height * config.render.carScreenY + (y - camera.y) * camera.zoom;
-    drawChain(ctx, sx, sy - 44, score.chain, score.multiplier);
-    hud.setPlaying(
-      score.score,
-      score.timeLeft,
-      config.scoring.runSeconds,
-      score.multiplier,
-      multiplierProgress(score),
-    );
+    if (session.activity === 'timed') drawChain(ctx, sx, sy - 44, score.chain, score.multiplier);
+    if (session.activity === 'timed')
+      hud.setPlaying(
+        score.score,
+        score.timeLeft,
+        config.scoring.runSeconds,
+        score.multiplier,
+        multiplierProgress(score),
+      );
   }
   drawPopups(ctx, popups);
 
@@ -623,6 +849,10 @@ if (debug)
   mountDebugPanel(
     import.meta.env.DEV
       ? (model: HandlingModel) => {
+          timedModel = model;
+          start = startFor(mode);
+          session = createSession('timed', mode);
+          hud.setActivity('timed');
           handling = new Handling(model, start, assistance);
           car = handling.car;
           setState('title');
