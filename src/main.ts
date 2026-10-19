@@ -670,7 +670,9 @@ function update(dt: number): void {
             force ? config.input.force.throttleSeconds : config.input.throttleSeconds,
             force ? config.input.force.throttleReleaseSeconds : 0,
           );
-      sources.add(input.source === 'controller' ? 'controller' : `${input.source}-${scheme}`);
+      // A record names only devices that drove: the keyboard default after a reset does not count.
+      if (input.engaged)
+        sources.add(input.source === 'controller' ? 'controller' : `${input.source}-${scheme}`);
       stepPhysics(dt, ctl, manual, manual && input.held.stick);
       // Hold cues stay up for a new player until their first lap, or first banked chain on the lot
       const learning =

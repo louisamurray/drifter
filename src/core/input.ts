@@ -302,6 +302,12 @@ export class TouchControls {
     else if (edges.confirm) this.onConfirmKey?.();
   }
 
+  /** True while the current source is actually supplying input: a key held, a thumb down, or an active controller. */
+  get engaged(): boolean {
+    if (this.source === 'controller') return this.controller.active;
+    return this.source === 'touch' ? this.pointers.size > 0 : this.keys.size > 0;
+  }
+
   private takeOver(source: 'keyboard' | 'touch'): void {
     if (this.source === 'controller') {
       this.reset();
