@@ -1,0 +1,178 @@
+{
+  "browser": "Chrome/154.0.8037.58",
+  "results": [
+    {
+      "viewport": {
+        "name": "desktop",
+        "width": 1280,
+        "height": 800,
+        "isMobile": false,
+        "hasTouch": false
+      },
+      "metrics": [
+        {
+          "selector": ".mode-toggle",
+          "top": 12,
+          "bottom": 56,
+          "left": 12,
+          "right": 476.625,
+          "scrollHeight": 44,
+          "clientHeight": 44
+        },
+        {
+          "selector": ".title-lockup",
+          "top": 128,
+          "bottom": 220.390625,
+          "left": 417,
+          "right": 863,
+          "scrollHeight": 92,
+          "clientHeight": 92
+        },
+        {
+          "selector": ".title-foot",
+          "top": 344.21875,
+          "bottom": 784,
+          "left": 320,
+          "right": 960,
+          "scrollHeight": 440,
+          "clientHeight": 440
+        }
+      ],
+      "controls": {
+        "pedals": "none",
+        "score": "none",
+        "timer": "none"
+      }
+    },
+    {
+      "viewport": {
+        "name": "touch",
+        "width": 393,
+        "height": 852,
+        "isMobile": true,
+        "hasTouch": true
+      },
+      "metrics": [
+        {
+          "selector": ".mode-toggle",
+          "top": 12,
+          "bottom": 106,
+          "left": 12,
+          "right": 295,
+          "scrollHeight": 94,
+          "clientHeight": 94
+        },
+        {
+          "selector": ".title-lockup",
+          "top": 135.265625,
+          "bottom": 204.0625,
+          "left": 44.90625,
+          "right": 348.078125,
+          "scrollHeight": 69,
+          "clientHeight": 69
+        },
+        {
+          "selector": ".title-foot",
+          "top": 359,
+          "bottom": 836,
+          "left": 16,
+          "right": 377,
+          "scrollHeight": 477,
+          "clientHeight": 477
+        }
+      ],
+      "controls": {
+        "pedals": "block",
+        "score": "none",
+        "timer": "none"
+      }
+    },
+    {
+      "viewport": {
+        "name": "small",
+        "width": 320,
+        "height": 568,
+        "isMobile": true,
+        "hasTouch": true
+      },
+      "metrics": [
+        {
+          "selector": ".mode-toggle",
+          "top": 12,
+          "bottom": 104,
+          "left": 12,
+          "right": 238,
+          "scrollHeight": 92,
+          "clientHeight": 92
+        },
+        {
+          "selector": ".title-lockup",
+          "top": 136,
+          "bottom": 203.1875,
+          "left": 29,
+          "right": 291,
+          "scrollHeight": 67,
+          "clientHeight": 67
+        },
+        {
+          "selector": ".title-foot",
+          "top": 227.1875,
+          "bottom": 758.1875,
+          "left": 16,
+          "right": 304,
+          "scrollHeight": 531,
+          "clientHeight": 531
+        }
+      ],
+      "controls": {
+        "pedals": "block",
+        "score": "none",
+        "timer": "none"
+      }
+    },
+    {
+      "viewport": {
+        "name": "landscape",
+        "width": 852,
+        "height": 393,
+        "isMobile": true,
+        "hasTouch": true
+      },
+      "metrics": [
+        {
+          "selector": ".mode-toggle",
+          "top": 12,
+          "bottom": 56,
+          "left": 12,
+          "right": 476.625,
+          "scrollHeight": 44,
+          "clientHeight": 44
+        },
+        {
+          "selector": ".title-lockup",
+          "top": 102,
+          "bottom": 164,
+          "left": 295,
+          "right": 557,
+          "scrollHeight": 62,
+          "clientHeight": 62
+        },
+        {
+          "selector": ".title-foot",
+          "top": 188,
+          "bottom": 591,
+          "left": 106,
+          "right": 746,
+          "scrollHeight": 403,
+          "clientHeight": 403
+        }
+      ],
+      "controls": {
+        "pedals": "block",
+        "score": "none",
+        "timer": "none"
+      }
+    }
+  ],
+  "errors": []
+}
