@@ -1,4 +1,5 @@
 import { config } from '../config';
+import type { HandlingModel } from '../game/handling';
 import { debugState } from './state';
 
 type NumericRecord = Record<string, number>;
@@ -13,9 +14,9 @@ interface Group {
  * Every numeric tunable in the listed config groups becomes a range input that
  * mutates config in place, so feel can be adjusted on a phone without a rebuild.
  */
-export function mountDebugPanel(): void {
+export function mountDebugPanel(onModelChange?: (model: HandlingModel) => void): void {
   const groups: Group[] = [
-    { label: 'physics', values: config.physics },
+    { label: 'legacy physics / shared road assist', values: config.physics },
     { label: 'camera', values: config.camera },
     { label: 'steer', values: config.input.steer },
   ];
@@ -40,6 +41,27 @@ export function mountDebugPanel(): void {
   root.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
   });
+
+  if (onModelChange) {
+    const label = document.createElement('label');
+    label.textContent = 'Handling (resets session) ';
+    const select = document.createElement('select');
+    select.id = 'debug-model';
+    for (const [value, text] of [
+      ['legacy', 'Legacy'],
+      ['force', 'Force prototype · no best saves'],
+    ] as const) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = text;
+      select.append(option);
+    }
+    select.addEventListener('change', () => {
+      onModelChange(select.value === 'force' ? 'force' : 'legacy');
+    });
+    label.append(select);
+    root.append(label);
+  }
 
   const auto = document.createElement('label');
   auto.style.display = 'block';

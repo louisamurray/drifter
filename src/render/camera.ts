@@ -26,9 +26,15 @@ export function moveCameraTo(cam: Camera, x: number, y: number, zoom: number, dt
 }
 
 /** Follow the car with velocity lead, zooming out with speed. */
-export function updateCamera(cam: Camera, car: CarState, speed: number, dt: number): void {
+export function updateCamera(
+  cam: Camera,
+  car: CarState,
+  speed: number,
+  dt: number,
+  referenceSpeed = config.physics.maxSpeed,
+): void {
   const c = config.camera;
-  const ratio = Math.min(speed / config.physics.maxSpeed, 1);
+  const ratio = Math.min(speed / referenceSpeed, 1);
   const zoom = c.zoomRest + (c.zoomFast - c.zoomRest) * ratio;
   moveCameraTo(cam, car.x + car.vx * c.leadTime, car.y + car.vy * c.leadTime, zoom, dt);
 }

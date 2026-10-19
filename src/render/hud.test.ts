@@ -74,3 +74,12 @@ describe('desktop control hints', () => {
     expect(hud.root.querySelectorAll('.hint-thumb')).toHaveLength(2);
   });
 });
+
+it('labels prototype results and suppresses competitive comparisons', () => {
+  const hud = new Hud(document.body);
+  hud.setGameOver(900, 300, true, false);
+  expect(hud.root.querySelector('.over-best')?.textContent).toBe(
+    'Handling prototype · best not saved',
+  );
+  expect(hud.root.querySelector('.over-newbest')?.classList.contains('show')).toBe(false);
+});

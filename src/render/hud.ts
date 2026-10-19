@@ -388,10 +388,12 @@ export class Hud {
     return bottom > top ? { top, bottom } : { top: 0, bottom: window.innerHeight };
   }
 
-  setGameOver(score: number, best: number, isNewBest: boolean): void {
+  setGameOver(score: number, best: number, isNewBest: boolean, competitive = true): void {
     this.finalScoreEl.textContent = fmtScore(score);
-    this.finalBestEl.textContent = `${MODE_NAME[this.mode]} best ${fmtScore(best)}`;
-    this.newBestEl.classList.toggle('show', isNewBest);
+    this.finalBestEl.textContent = competitive
+      ? `${MODE_NAME[this.mode]} best ${fmtScore(best)}`
+      : 'Handling prototype · best not saved';
+    this.newBestEl.classList.toggle('show', competitive && isNewBest);
   }
 
   private punch(target: HTMLElement | null): void {

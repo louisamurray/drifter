@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { config } from '../config';
 import { lotBounds } from '../game/lot';
-import { fitOverview } from './camera';
+import { createCar } from '../game/car';
+import { createCamera, updateCamera, fitOverview } from './camera';
 
 describe('expanded lot overview', () => {
   it.each([
@@ -21,4 +22,16 @@ describe('expanded lot overview', () => {
       }
     }
   });
+});
+
+it('normalises camera zoom by the selected model reference speed', () => {
+  const car = createCar();
+  const legacy = createCamera(car);
+  const force = createCamera(car);
+  updateCamera(legacy, car, 360, 1 / 60);
+  updateCamera(force, car, 380, 1 / 60, 380);
+  expect(force.zoom).toBe(legacy.zoom);
+  const slower = createCamera(car);
+  updateCamera(slower, car, 360, 1 / 60, 380);
+  expect(slower.zoom).toBeGreaterThan(force.zoom);
 });

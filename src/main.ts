@@ -6,17 +6,8 @@ import { GameLoop } from './core/loop';
 import type { GameMode } from './core/mode';
 import type { GameState } from './core/state';
 import { autopilot } from './game/autopilot';
-import {
-  assistYaw,
-  cornerLift,
-  createCar,
-  liftLookahead,
-  ROAD,
-  stepCar,
-  telemetry,
-  type CarState,
-  type Surface,
-} from './game/car';
+import { assistYaw, cornerLift, liftLookahead, type CarState } from './game/car';
+import { Handling, type HandlingModel } from './game/handling';
 import type { InputState } from './core/input';
 import { createLapState, updateLaps } from './game/laps';
 import { createLotPilot, insideLot, lotBounds, lotStartPose } from './game/lot';
@@ -80,7 +71,6 @@ hud.setInstallHint(!isStandalone() && matchMedia('(pointer: coarse)').matches);
 const track = buildTrack({ ...CIRCUIT, width: config.track.width, scale: config.track.scale });
 const TRACK_BOUNDS = trackBounds(track);
 const lot = config.lot;
-const grass: Surface = config.offTrack;
 
 /**
  * Where the run happens. On the track the car has a road to follow: assist,
@@ -126,7 +116,8 @@ function skidsFor(m: GameMode): SkidLayer {
 }
 
 // Run state, rebuilt on every restart
-const car = createCar(start.x, start.y, start.heading);
+let handling = new Handling('legacy', start);
+let car = handling.car;
 const prev: CarState = { ...car };
 let laps = createLapState();
 let score = createScore();
@@ -141,6 +132,7 @@ let countdownLeft = 0;
 let lastTick = 0;
 /** What the car looked like it was doing on the last physics step, for the renderer. */
 const carLook = { steer: 0, roll: 0, brake: 0 };
+let lastControl: InputState = { steer: 0, throttle: 0, handbrake: false };
 
 let skids = skidsFor(mode);
 const smoke = new SmokePool(config.juice.smokeMax);
@@ -153,7 +145,11 @@ const camera = createCamera(car);
 let state: GameState = 'title';
 
 function resetRun(): void {
-  Object.assign(car, createCar(start.x, start.y, start.heading));
+  handling.reset(start);
+  lastControl = { steer: 0, throttle: 0, handbrake: false };
+  Object.assign(carLook, { steer: 0, roll: 0, brake: 0 });
+  Object.assign(shake, createShake());
+  Object.assign(camera, createCamera(car));
   Object.assign(prev, car);
   laps = createLapState();
   score = createScore();
@@ -178,7 +174,7 @@ function setState(next: GameState): void {
   if (from === 'paused' && next !== 'paused') audio.resume();
   if (next === 'title') {
     resetRun();
-    hud.setBests(bests);
+    hud.setBests(handling.canSaveBest ? bests : { track: 0, free: 0 });
     audio.stopEngine();
   } else if (next === 'countdown') {
     resetRun();
@@ -192,12 +188,12 @@ function setState(next: GameState): void {
   } else if (next === 'gameover') {
     input.reset();
     audio.stopEngine(1.2);
-    newBest = score.score > bests[mode];
+    newBest = handling.canSaveBest && score.score > bests[mode];
     if (newBest) {
       bests[mode] = score.score;
       saveBest(mode, score.score);
     }
-    hud.setGameOver(score.score, bests[mode], newBest);
+    hud.setGameOver(score.score, bests[mode], newBest, handling.canSaveBest);
   }
 }
 
@@ -269,7 +265,9 @@ input.onPauseKey = () => {
 
 async function share(): Promise<void> {
   const where = mode === 'track' ? 'in Drifter' : "in Drifter's open lot";
-  const text = `I scored ${fmtScore(score.score)} ${where}. Can you beat it?`;
+  const text = handling.canSaveBest
+    ? `I scored ${fmtScore(score.score)} ${where}. Can you beat it?`
+    : `Handling prototype ${where} · experimental score ${fmtScore(score.score)}`;
   const url = location.origin + location.pathname;
   try {
     const file = await captureFrame();
@@ -300,18 +298,19 @@ function captureFrame(): Promise<File | null> {
  * owns the heading, so road assist stays out of it until the thumb lets go.
  */
 function stepPhysics(dt: number, ctl: InputState, manual = false, pointed = false): void {
+  lastControl = { ...ctl };
   Object.assign(prev, car);
   const p = config.physics;
   const onRoad = mode === 'track';
   const assist =
     onRoad && !pointed ? assistYaw(car.heading, roadHeading, car.drifting, offTrack, p) : 0;
-  const forward = telemetry(car).forwardSpeed;
+  const forward = handling.telemetry().forwardSpeed;
   const lift =
     onRoad && !manual
       ? cornerLift(forward, minRadiusAhead(track, trackIndex, liftLookahead(forward, p)), p)
       : 0;
-  stepCar(car, ctl, dt, p, offTrack ? grass : ROAD, assist, lift);
-  carLook.steer = ctl.steer;
+  handling.step(ctl, dt, { offTrack, roadYaw: assist, lift, counterSteer: 1 });
+  carLook.steer = handling.appliedWheelAngle;
   carLook.brake = ctl.handbrake ? 1 : Math.max(lift, manual && ctl.throttle < 0.5 ? 0.6 : 0);
   const lapsBefore = laps.laps;
   if (onRoad) {
@@ -324,11 +323,11 @@ function stepPhysics(dt: number, ctl: InputState, manual = false, pointed = fals
   } else {
     offTrack = !insideLot(lot, car.x, car.y);
   }
-  const t = telemetry(car);
+  const t = handling.telemetry();
   carLook.roll = Math.max(-1, Math.min(1, t.lateralSpeed / config.juice.fullIntensityLateral));
   layRubber(t.lateralSpeed, dt);
   audio.update({
-    speedRatio: t.speed / config.physics.maxSpeed,
+    speedRatio: t.speed / handling.referenceSpeed,
     throttle: ctl.throttle,
     drifting: car.drifting,
     handbrake: ctl.handbrake,
@@ -352,7 +351,7 @@ function stepPhysics(dt: number, ctl: InputState, manual = false, pointed = fals
     handleScoreEvents();
     if (score.finished) setState('gameover');
   }
-  updateCamera(camera, car, t.speed, dt);
+  updateCamera(camera, car, t.speed, dt, handling.referenceSpeed);
 }
 
 /** Skid marks and smoke from the rear wheels, scaled by how hard the car is sliding. */
@@ -367,7 +366,7 @@ function layRubber(lateralSpeed: number, dt: number): void {
   const [pax, pay, pbx, pby] = rearWheels(prev.x, prev.y, prev.heading);
   skids.mark(pax, pay, ax, ay, intensity);
   skids.mark(pbx, pby, bx, by, intensity);
-  const heat = Math.min(1, Math.abs(telemetry(car).slipAngle) / 0.8);
+  const heat = Math.min(1, Math.abs(handling.telemetry().slipAngle) / 0.8);
   const rate = config.juice.smokeRate * intensity;
   smoke.emit(ax, ay, car.vx, car.vy, rate, dt, heat);
   smoke.emit(bx, by, car.vx, car.vy, rate, dt, heat);
@@ -533,14 +532,14 @@ function render(alpha: number): void {
       ctx,
       viewport,
       car,
-      telemetry(car),
+      handling.telemetry(),
       laps,
       offTrack,
       fps,
-      input.state.steer,
-      input.state.throttle,
+      lastControl.steer,
+      lastControl.throttle,
       safeArea('--sat') + 70,
-      `${mode} ${scheme}  ${audio.describe()}  haptics: ${hapticsDescription()}`,
+      `${handling.diagnostics()}\n${mode} ${scheme} · ${audio.describe()}\nhaptics: ${hapticsDescription()}`,
     );
   }
 }
@@ -573,6 +572,15 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-if (debug) mountDebugPanel();
+if (debug)
+  mountDebugPanel(
+    import.meta.env.DEV
+      ? (model: HandlingModel) => {
+          handling = new Handling(model, start);
+          car = handling.car;
+          setState('title');
+        }
+      : undefined,
+  );
 setState('title');
 loop.start();

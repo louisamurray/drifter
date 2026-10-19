@@ -219,7 +219,7 @@ const CAR_WIDTH = 20;
 
 /** Per-frame cues that make the car read as driven, not just moved. */
 export interface CarLook {
-  /** Steering input -1..1; turns the front wheels. */
+  /** Applied clockwise road-wheel angle in radians. */
   steer: number;
   /** Signed lateral speed ratio -1..1; shifts the body on its wheels in a slide. */
   roll: number;
@@ -314,7 +314,7 @@ export function drawCar(
   const frontX = L * 0.52;
   wheel(ctx, rearX, -W * 1.1, 10, 0);
   wheel(ctx, rearX, W * 1.1, 10, 0);
-  const steerAngle = look.steer * 0.42;
+  const steerAngle = look.steer;
   wheel(ctx, frontX, -W * 0.98, 8.5, steerAngle);
   wheel(ctx, frontX, W * 0.98, 8.5, steerAngle);
 
@@ -399,7 +399,7 @@ export function drawDebug(
     `slip ${((t.slipAngle * 180) / Math.PI).toFixed(0)}°  ${car.drifting ? 'DRIFT' : ''}`,
     `steer ${steer.toFixed(2)}  throttle ${String(throttle)}${offTrack ? '  OFF TRACK' : ''}`,
     `lap ${String(laps.laps)}  ${fmt(laps.lapTime)}  best ${laps.bestLap === null ? '--' : fmt(laps.bestLap)}`,
-    extra,
+    ...extra.split('\n'),
   ];
   ctx.fillStyle = car.drifting ? config.palette.accent : config.palette.hudText;
   ctx.font = '600 14px ui-monospace, Menlo, monospace';
