@@ -274,7 +274,7 @@ The next step is people, not code:
 2. Run the human baseline and the moderated Gate 2 and Gate 3 sessions with new and experienced players. Use the decision log in the T4–T11 evidence, and set numeric targets before tuning.
 3. Measure on an Android phone, a tablet and a controller, with `?debug` frame timing.
 
-The D2 eight and D3 course were checked against the shipped geometry on 21 October. The D3 hand matches; both drawings still differ in shape or scale, which the [design check](2026-10-21-gate-closure.md#design-check-d2-eight-and-d3-course) leaves to the owner.
+The D2 eight and D3 course were checked against the shipped geometry on 21 October. The D3 hand matches, and D3 has been redrawn to the shipped course; the D2 eight's scale waits for playtesting. See the [design check](2026-10-21-gate-closure.md#design-check-d2-eight-and-d3-course).
 
 Revisit the default handling only with that evidence. No delivery dates are committed here. The [roadmap](2026-10-21-roadmap.md) takes these steps on as Phase 5 and continues through release, new content and online play.
 
@@ -283,6 +283,6 @@ Later priorities, conditional on playtesting: personal-best ghost with compatibi
 ## 9. Planning artefacts and evidence limits
 
 - This Markdown file is the detailed development plan; the supplied research remains the external-source record. This task did not revalidate those public sources or add new external factual claims.
-- The supplied Figma Design file was initially empty. A later session added proposed D1, D2 and D3 pages, a brand guide, foundations and components. Their approval and runtime or device validation are outstanding. This plan's implementation changed the challenge's hand and the lesson eight after those pages were drawn; a later check found the D3 hand matches, while the course shape and the eight's scale differ.
+- The supplied Figma Design file was initially empty. A later session added proposed D1, D2 and D3 pages, a brand guide, foundations and components. Their approval and runtime or device validation are outstanding. This plan's implementation changed the challenge's hand and the lesson eight after those pages were drawn; a later check found the D3 hand matches, and D3 was redrawn to the shipped course; the eight's scale is still to settle.
 - A FigJam dependency/gate diagram was submitted through Figma. Generation requires a team/organisation selection in the Figma widget; a completed board URL is not yet available. The source diagram is retained in [drift-development-sequence.mmd](drift-development-sequence.mmd).
 - Writing the original plan did not change gameplay or run tests. Later work added baseline fixtures, the larger car park, the T2 solver, its integration, input and assistance, practice, lessons, the challenge, and release checks, each with its own evidence record. Human and device playtests remain pending, and each delivery gate still needs its human evidence.

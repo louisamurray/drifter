@@ -76,13 +76,14 @@ No phone, tablet or 60 fps device result exists yet. A loaded desktop is not a s
 
 | Observation | Severity | Mechanism | Change | Ruleset | Test | Human follow-up | Outcome |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| First corner bent opposite to the credited slide | Blocking | Path sign | Mirrored course | `s-bend-2` | Bend direction; real-car drives | Confirm the hand matches the D3 schematic | Hand confirmed: both bend left first. The shape and zones still differ ([design check](2026-10-21-gate-closure.md#design-check-d2-eight-and-d3-course)) |
+| First corner bent opposite to the credited slide | Blocking | Path sign | Mirrored course | `s-bend-2` | Bend direction; real-car drives | Confirm the hand matches the D3 schematic | Hand confirmed: both bend left first. D3 redrawn to match `s-bend-2` on 21 October ([design check](2026-10-21-gate-closure.md#design-check-d2-eight-and-d3-course)) |
 | Lesson eight undrivable | Blocking | Hairpin geometry | Two-loop eight | Lesson data | Minimum radius; real-car drives | Is 300 units the right loop size for new players? | Pending: kit A3 and B4; new players still needed |
 | Switch window lapsed during a held left slide | Major | Timer start | Armed until the slide ends; 4 s | Lesson data | Armed-switch and lapse tests | Calibrate 4 s with observed attempts | Pending: kit A3 |
 | Assisted countersteer fades long slides | Unknown | Countersteer assist | None | — | Sustain holds 3.05 s at 0.35 rad under Assisted, completes under Reduced | Does Assisted make Sustain frustrating? | Pending: kit A3 and A4 |
 | Clean scripted line is sensitive: 0.05 rad less slip or a 20–30 units/s top-speed change loses one or two gates | Unknown | Gate width and angle envelope | None | `precision-2` | Recorded in the drive probe | Is the challenge too demanding? Set targets before tuning | Pending: kit A5, A6 and B6 |
 | Wheelspin cue nearly inert: 21 of 600 frames in a held drift, peak 0.17 | Minor | Rear load transfer exceeds drive | None | `force-1` | Feedback tests | Does any engine cue help comprehension? | Pending: kit A7 |
 | Results overview is a thin band on short windows | Minor | Opaque results panel | None | — | Screenshot | Design review against D3 results frames | Pending: kit A7 |
+| Challenge gate labels render in the default sans | Minor | Canvas font names "Archivo Expanded"; the page registers "Archivo" | Use the registered family at weight 800 | — | Not yet | None | Pending: owner decision |
 
 ## Not done here
 

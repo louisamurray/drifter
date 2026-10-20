@@ -45,7 +45,7 @@ The deployed build cannot run timed courses on force handling: that selector exi
 
 ## Design check: D2 eight and D3 course
 
-This resolves the plan's request to check both drawings against the shipped geometry. Neither Figma page was edited.
+This resolves the plan's request to check both drawings against the shipped geometry. The check changed nothing in Figma; the D3 redraw that followed is described below.
 
 **D3 course (`s-bend-2`).** The hand matches. In D3.01 and in the game, the first corner bends left and the second bends right. The decision log's first follow-up is answered. The geometry differs in three ways:
 
@@ -57,12 +57,33 @@ This resolves the plan's request to check both drawings against the shipped geom
 
 **D2 eight.** The shape matches: two equal loops touching at the crossing, left loop first. The scale does not. In D2.12 the lot ring is close to true scale (286 px for 260 units at the game's resting zoom of 1.1), but the loops have a 120 px radius where 300 units would draw 330 px. So the loops are about 2.75 times too small against the car, and they overlap the ring, when the eight actually sits 900 units below the ring's centre. At the game's zoom of 0.85–1.1, one loop is 510–660 px across, wider than a 393 px phone, so a touch player never sees the whole eight. Check B4 records whether that matters.
 
-Both differences are design choices for the owner rather than redraws: either the game follows D3 (a road and apex targets) or D3 is redrawn as the shipped open-lot S; and either the eight is drawn at true scale or the lesson changes its loops or camera. The roadmap's D4 takes them on.
+Both differences were design choices for the owner. The owner chose to redraw D3 to match the game, and to decide the D2 eight's scale after playtesting.
+
+### D3 redrawn to match the game
+
+D3 was redrawn on 21 October from a designer spec. The old screens are archived, locked, on the `90 Archive` page as "D3 superseded (pre s-bend-2)".
+
+- **Gate component.** `World/Zone` Gate variants now draw one line that stretches to any length: dashed until crossed, cream, or accent when it is the next target. A new Marks property holds the proposed end ticks, active chevrons and missed cross. Every D3 instance has Marks off, so it draws what the game draws. The Clip and Outer variants stay in the library, described as not used by `s-bend-2`.
+- **D3.01 schematic.** The S is to scale at 1 px = 3 world units, with north up: guide path, lot ring at the Switch, seven gate lines in sentence-case labels, and the car at the spawn. The legend now reads "Gate states", followed by the order of the gates with their Line awards. The purple annotations name the corners and the transition, and the suggested racing line is gone.
+- **In-play screens** (D3.04–D3.08, D3.12, D3.13, D3.21, D3.22, D3.25, D3.27). Open asphalt, with the camera, zoom, car pose, gate states, labels and rubber computed from the game's formulas for each moment. The HUD cue reads as the game does, for example "Next: Switch · slide right", or the loss reason after a miss. Score pops and the transition chevrons are gone, because the challenge draws neither.
+- **Results screens** (D3.09–D3.11, D3.14–D3.20, D3.23, D3.24, D3.26, D3.28, D3.29). The whole lot, fitted by the game's overview rule into the space D3 gives the overview. On a phone the S is about 34 × 85 px.
+
+**Still different, left for the owner:**
+
+| Difference | Game | D3 | Where it is decided |
+| --- | --- | --- | --- |
+| Gate label font | Canvas asks for "Archivo Expanded", which the page never registers, so labels fall back to the default sans | Archivo ExtraBold, as intended | Owner: fix the game (one line, `src/main.ts` lines 729 and 743) |
+| Results layout | Breakdown and reason sit inside the score block; the overview takes what is left above the buttons | The overview sits between the score and the breakdown | Decision log: results band, kit A7 |
+| Results copy | "Line + Angle + Transition", one reason line, the ruleset identity | "3 of 4 zones", "In range 74%", "Challenge rules 1", a two-line reason | T20 design approval |
+| HUD | Activity bar and one cue line, always shown | A Steps row; several screens have no cue; a second cue line | T20 design approval |
+| Gate marks and labels | Missed looks like Upcoming apart from its label; the Switch and Outer 2 lines cross their own labels | Same, since Marks are off | Owner: propose marks or label placement to the game, or not |
+
+One finding for playtesting: on a phone just after Clip 1, the active Switch gate is still off screen, because the camera leads the car by only 37 units. Kit checks B4 and B6 will show whether that matters.
 
 ## Still open after the kit
 
 - Moderated sessions with new and experienced players, alternating handling order (Gates 2 and 3).
 - An Android phone in Chrome and a tablet (Gate 4).
 - A physical controller: analogue steering, disconnect and takeover (Gate 4).
-- Approval of the D1–D3 designs, after the D2 and D3 decisions above.
+- Approval of the D1–D3 designs. D3 now matches the game apart from the differences listed above; the D2 eight waits for playtesting.
 - The FigJam dependency diagram, which still needs a team selected in Figma.
