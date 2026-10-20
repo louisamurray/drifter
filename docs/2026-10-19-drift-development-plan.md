@@ -1,7 +1,7 @@
 # Drifter: handling and engagement development plan
 
 Date: 19 October 2026  
-Status: engineering work for T1–T10 is implemented and checked locally, and T11's default-handling decision is recorded: legacy stays the default for timed courses. Proposed D1–D3 screens exist in Figma. Every human, physical-device and controller check remains pending, so Gates 1–4 are not passed. See the [T4, T6–T11 evidence](2026-10-19-activities-t4-t11.md). The requested car park enlargement is implemented.
+Status: engineering work for T1–T10 is implemented and checked locally, and T11's default-handling decision is recorded: legacy stays the default for timed courses. Proposed D1–D3 screens exist in Figma. Every human, physical-device and controller check remains pending, so Gates 1–4 are not passed. See the [T4, T6–T11 evidence](2026-10-19-activities-t4-t11.md). The requested car park enlargement is implemented. Remaining work continues in the [roadmap](2026-10-21-roadmap.md).
 
 Repository inspected: `dedc31f`.  
 Input: [drift physics and engagement research](2026-10-19-drift-physics-and-engagement-research.md).  
@@ -274,9 +274,9 @@ The next step is people, not code:
 2. Measure on physical phones and a controller, with `?debug` frame timing.
 3. Check the D2 eight and D3 course schematics against the shipped geometry.
 
-Revisit the default handling only with that evidence. No delivery dates are committed here.
+Revisit the default handling only with that evidence. No delivery dates are committed here. The [roadmap](2026-10-21-roadmap.md) takes these steps on as Phase 5 and continues through release, new content and online play.
 
-Later priorities, conditional on playtesting: personal-best ghost with compatibility checks, short medal challenges and additional corner sequences. Add explicit wheel angular speed/slip ratio only when a measured handling or feedback limitation justifies it.
+Later priorities, conditional on playtesting: personal-best ghost with compatibility checks, short medal challenges and additional corner sequences. The roadmap schedules these in Phase 7. Add explicit wheel angular speed/slip ratio only when a measured handling or feedback limitation justifies it.
 
 ## 9. Planning artefacts and evidence limits
 

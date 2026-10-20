@@ -4,7 +4,7 @@ A simple car-drifting game for mobile browsers. Top-down, portrait, sixty-second
 
 Deployed to GitHub Pages on every push to `main`: https://louisamurray.github.io/drifter/
 
-See [docs/PLAN.md](docs/PLAN.md) for the design and build plan, the [handling and engagement plan](docs/2026-10-19-drift-development-plan.md) for current work, and the [change note](docs/2026-10-19-change-note.md) for what changed most recently.
+See [docs/PLAN.md](docs/PLAN.md) for the design and build plan, the [handling and engagement plan](docs/2026-10-19-drift-development-plan.md) for current work, the [roadmap](docs/2026-10-21-roadmap.md) for what comes next, and the [change note](docs/2026-10-19-change-note.md) for what changed most recently.
 
 There is also a native iOS app under [`ios/`](ios/README.md): fully offline, two-thumb controls only, with a rigid-body car on Pacejka tyres in place of the arcade slide model. Open `ios/Drifter.xcodeproj` in Xcode 16 to build it.
 
