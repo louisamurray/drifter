@@ -1,7 +1,7 @@
 # Drifter: handling and engagement development plan
 
 Date: 19 October 2026  
-Status: engineering work for T1–T10 is implemented and checked locally, and T11's default-handling decision is recorded: legacy stays the default for timed courses. Proposed D1–D3 screens exist in Figma. Every human, physical-device and controller check remains pending, so Gates 1–4 are not passed. See the [T4, T6–T11 evidence](2026-10-19-activities-t4-t11.md). The requested car park enlargement is implemented. Remaining work continues in the [roadmap](2026-10-21-roadmap.md).
+Status: engineering work for T1–T10 is implemented, checked locally and deployed (game code `87c5469`), and T11's default-handling decision is recorded: legacy stays the default for timed courses. Proposed D1–D3 screens exist in Figma. Every human, physical-device and controller check remains pending, so Gates 1–4 are not passed. A [playtest kit](2026-10-21-gate-closure.md) for the owner's keyboard and iPhone checks is ready. See the [T4, T6–T11 evidence](2026-10-19-activities-t4-t11.md). The requested car park enlargement is implemented. Remaining work continues in the [roadmap](2026-10-21-roadmap.md).
 
 Repository inspected: `dedc31f`.  
 Input: [drift physics and engagement research](2026-10-19-drift-physics-and-engagement-research.md).  
@@ -160,7 +160,7 @@ Status: implemented in `fd34adb`; reset after leaving a lesson fixed in `8e10e70
 
 **Gate 1:** deterministic and stable manoeuvres; left/right symmetry; grass transitions; correct coordinate conversion; practice can run beyond 60 seconds and reset/pause/exit without saving a best. A manual keyboard walkthrough can initiate and catch a slide. This is the first playable delivery; lessons and precision scoring are not required yet.
 
-Gate 1 status: the engineering checks pass. A person's keyboard walkthrough is still pending.
+Gate 1 status: the engineering checks pass. A person's keyboard walkthrough is still pending; kit check A2 covers it.
 
 ### Phase 2 — inputs, assistance and learning
 
@@ -191,7 +191,7 @@ Status: implemented in `fd34adb`. The Transition eight was redrawn as two drivab
 
 **Gate 2:** regression checks cover each input and assistance profile. Moderated comparison establishes whether players can repeat a slide, connect directions and explain a loss of control. Resolve blocking comprehension or recovery failures before precision scoring. Set numeric playtest targets after baseline observations, then freeze them before the next comparison.
 
-Gate 2 status: regression checks cover each input and assistance profile. The moderated comparison has not happened, so Gate 2 is not passed.
+Gate 2 status: regression checks cover each input and assistance profile. The moderated comparison has not happened, so Gate 2 is not passed. Kit checks A3, A4, B4 and B5 record the owner's observations, which do not replace sessions with new players.
 
 ### Phase 3 — one precision-scored corner sequence
 
@@ -215,7 +215,7 @@ Status: implemented. Results show contributions, the first loss reason (includin
 
 **Gate 3:** identical input fixtures produce identical score events; a clean linked sequence beats exploit fixtures under the frozen rules; results explain the difference. Human sessions check whether the feedback suggests a useful next attempt. Approval of scoring weights depends on this evidence, not their visual polish.
 
-Gate 3 status: the fixture, exploit and explanation checks pass. Human sessions are pending.
+Gate 3 status: the fixture, exploit and explanation checks pass. Human sessions are pending. Kit checks A5, A6 and B6 record the owner's attempts and a scoring-weight decision.
 
 ### Phase 4 — browser release and adoption
 
@@ -230,7 +230,7 @@ Status: the required checks pass, and desktop frame cost and bundle size are rec
 
 **T11 — Choose defaults and release** · Product/design + engineering · Depends on: T10 and human gates
 
-Status: decided to keep legacy handling as the default for Circuit and Free drift until human comparison evidence exists; the force model stays in practice, lessons and the challenge. README, the original plan and a [change note](2026-10-19-change-note.md) are updated. Deploying to `main` awaits the owner.
+Status: decided to keep legacy handling as the default for Circuit and Free drift until human comparison evidence exists; the force model stays in practice, lessons and the challenge. README, the original plan and a [change note](2026-10-19-change-note.md) are updated. `main` is deployed to GitHub Pages.
 
 - Decide from comparison evidence whether the new model should become the default for existing timed courses. Keep the prototype available if it is stable but not yet preferable.
 - If adopting it, preserve existing course choices and timed rules, version their bests, retune the title drivers and publish a short change note covering handling, assistance and historical scores.
@@ -238,7 +238,7 @@ Status: decided to keep legacy handling as the default for Circuit and Free drif
 
 **Gate 4:** required checks pass, human findings and hardware evidence are recorded, blocking issues are resolved, and the default-handling decision is explicit. Multiplayer, a garage, online accounts and new content are not release dependencies.
 
-Gate 4 status: the required checks pass and the default decision is explicit. Human and hardware evidence is missing, so Gate 4 is not passed.
+Gate 4 status: the required checks pass and the default decision is explicit. Human and hardware evidence is missing, so Gate 4 is not passed. Kit checks A7 and B1–B8 cover the owner's iPhone; no Android phone, tablet or controller is available yet.
 
 ## 6. Verification matrix
 
@@ -270,9 +270,11 @@ T1's engineering capture and conversion contract are recorded in the [handling b
 
 The next step is people, not code:
 
-1. Run the human baseline and the moderated Gate 2 and Gate 3 sessions. Use the decision log in the T4–T11 evidence, and set numeric targets before tuning.
-2. Measure on physical phones and a controller, with `?debug` frame timing.
-3. Check the D2 eight and D3 course schematics against the shipped geometry.
+1. Run the [playtest kit](2026-10-21-gate-closure.md): the owner's keyboard walkthrough, lessons, challenge attempts and iPhone checks. It can close Gate 1's walkthrough and Gate 4's iPhone checks.
+2. Run the human baseline and the moderated Gate 2 and Gate 3 sessions with new and experienced players. Use the decision log in the T4–T11 evidence, and set numeric targets before tuning.
+3. Measure on an Android phone, a tablet and a controller, with `?debug` frame timing.
+
+The D2 eight and D3 course were checked against the shipped geometry on 21 October. The D3 hand matches; both drawings still differ in shape or scale, which the [design check](2026-10-21-gate-closure.md#design-check-d2-eight-and-d3-course) leaves to the owner.
 
 Revisit the default handling only with that evidence. No delivery dates are committed here. The [roadmap](2026-10-21-roadmap.md) takes these steps on as Phase 5 and continues through release, new content and online play.
 
@@ -281,6 +283,6 @@ Later priorities, conditional on playtesting: personal-best ghost with compatibi
 ## 9. Planning artefacts and evidence limits
 
 - This Markdown file is the detailed development plan; the supplied research remains the external-source record. This task did not revalidate those public sources or add new external factual claims.
-- The supplied Figma Design file was initially empty. A later session added proposed D1, D2 and D3 pages, a brand guide, foundations and components. Their approval and runtime or device validation are outstanding. This plan's implementation changed the challenge's hand and the lesson eight after those pages were drawn.
+- The supplied Figma Design file was initially empty. A later session added proposed D1, D2 and D3 pages, a brand guide, foundations and components. Their approval and runtime or device validation are outstanding. This plan's implementation changed the challenge's hand and the lesson eight after those pages were drawn; a later check found the D3 hand matches, while the course shape and the eight's scale differ.
 - A FigJam dependency/gate diagram was submitted through Figma. Generation requires a team/organisation selection in the Figma widget; a completed board URL is not yet available. The source diagram is retained in [drift-development-sequence.mmd](drift-development-sequence.mmd).
 - Writing the original plan did not change gameplay or run tests. Later work added baseline fixtures, the larger car park, the T2 solver, its integration, input and assistance, practice, lessons, the challenge, and release checks, each with its own evidence record. Human and device playtests remain pending, and each delivery gate still needs its human evidence.
