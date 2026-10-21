@@ -7,7 +7,7 @@ import type { Shake, SmokePool } from '../game/particles';
 import type { Camera } from './camera';
 import type { Viewport } from '../core/canvas';
 
-const UI_FONT = "'Archivo', ui-sans-serif, system-ui, sans-serif";
+export const UI_FONT = "'Archivo', ui-sans-serif, system-ui, sans-serif";
 
 export function beginWorld(
   ctx: CanvasRenderingContext2D,

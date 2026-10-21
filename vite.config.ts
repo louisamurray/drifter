@@ -10,5 +10,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.ts'],
+    // Lets tests read the stylesheet with ?raw, for example its @font-face rules.
+    css: { include: [/style\.css/] },
   },
 });

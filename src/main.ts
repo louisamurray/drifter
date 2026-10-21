@@ -65,6 +65,7 @@ import {
   endWorld,
   rearWheels,
   type Popup,
+  UI_FONT,
 } from './render/draw';
 import { SkidLayer } from './render/skids';
 import { haptic, hapticsDescription } from './core/haptics';
@@ -726,7 +727,7 @@ function drawTargets(): void {
   ctx.globalAlpha = 1;
   if (session.activity === 'lesson') {
     ctx.fillStyle = config.palette.accent;
-    ctx.font = '18px Archivo Expanded, sans-serif';
+    ctx.font = `800 18px ${UI_FONT}`;
     ctx.fillText('Switch · left to right', LESSON_EIGHT.x + 24, LESSON_EIGHT.y - 24);
     ctx.restore();
     return;
@@ -740,7 +741,7 @@ function drawTargets(): void {
     ctx.moveTo(g.x - g.ny * g.halfWidth, g.y + g.nx * g.halfWidth);
     ctx.lineTo(g.x + g.ny * g.halfWidth, g.y - g.nx * g.halfWidth);
     ctx.stroke();
-    ctx.font = '18px Archivo Expanded, sans-serif';
+    ctx.font = `800 18px ${UI_FONT}`;
     ctx.fillText(
       `${String(i + 1)} ${g.label}${zone === 'complete' ? ' · Done' : zone === 'missed' ? ' · Missed' : ''}`,
       g.x + 24,
