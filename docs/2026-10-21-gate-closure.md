@@ -7,7 +7,7 @@ Follows the [T4, T6–T11 evidence](2026-10-19-activities-t4-t11.md). Every engi
 
 ## Release state
 
-`main` is deployed to GitHub Pages. The deploy at `a90ffdc` succeeded, and the last change to game code is `87c5469`. The later commits change only docs, so every result recorded against the live build is a result for `87c5469`. T11's "deploying awaits the owner" is resolved.
+`main` is deployed to GitHub Pages, so T11's "deploying awaits the owner" is resolved. The kit was written against game code `87c5469`. The gate-label font fix `7a3753e` changes only how canvas labels are drawn, and it deployed before any result was recorded, so every result recorded against the live build is a result for `7a3753e`.
 
 ## Who and what is available
 
@@ -72,11 +72,12 @@ D3 was redrawn on 21 October from a designer spec. The old screens are archived,
 
 | Difference | Game | D3 | Where it is decided |
 | --- | --- | --- | --- |
-| Gate label font | Canvas asks for "Archivo Expanded", which the page never registers, so labels fall back to the default sans | Archivo ExtraBold, as intended | Owner: fix the game (one line, `src/main.ts` lines 729 and 743) |
 | Results layout | Breakdown and reason sit inside the score block; the overview takes what is left above the buttons | The overview sits between the score and the breakdown | Decision log: results band, kit A7 |
 | Results copy | "Line + Angle + Transition", one reason line, the ruleset identity | "3 of 4 zones", "In range 74%", "Challenge rules 1", a two-line reason | T20 design approval |
 | HUD | Activity bar and one cue line, always shown | A Steps row; several screens have no cue; a second cue line | T20 design approval |
 | Gate marks and labels | Missed looks like Upcoming apart from its label; the Switch and Outer 2 lines cross their own labels | Same, since Marks are off | Owner: propose marks or label placement to the game, or not |
+
+The gate label font differed too: the canvas asked for "Archivo Expanded", which the page never registers, so labels fell back to the default sans. The game now draws them in Archivo ExtraBold, as D3 does (`7a3753e`).
 
 One finding for playtesting: on a phone just after Clip 1, the active Switch gate is still off screen, because the camera leads the car by only 37 units. Kit checks B4 and B6 will show whether that matters.
 

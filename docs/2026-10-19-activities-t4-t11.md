@@ -83,13 +83,13 @@ No phone, tablet or 60 fps device result exists yet. A loaded desktop is not a s
 | Clean scripted line is sensitive: 0.05 rad less slip or a 20–30 units/s top-speed change loses one or two gates | Unknown | Gate width and angle envelope | None | `precision-2` | Recorded in the drive probe | Is the challenge too demanding? Set targets before tuning | Pending: kit A5, A6 and B6 |
 | Wheelspin cue nearly inert: 21 of 600 frames in a held drift, peak 0.17 | Minor | Rear load transfer exceeds drive | None | `force-1` | Feedback tests | Does any engine cue help comprehension? | Pending: kit A7 |
 | Results overview is a thin band on short windows | Minor | Opaque results panel | None | — | Screenshot | Design review against D3 results frames | Pending: kit A7 |
-| Challenge gate labels render in the default sans | Minor | Canvas font names "Archivo Expanded"; the page registers "Archivo" | Use the registered family at weight 800 | — | Not yet | None | Pending: owner decision |
+| Challenge gate labels render in the default sans | Minor | Canvas font names "Archivo Expanded"; the page registers "Archivo" | Use the registered family at weight 800 | — | Every canvas font names a registered face or a generic family | None | Fixed in `7a3753e` |
 
 ## Not done here
 
 - Human baseline, moderated comparisons, physical touch devices, physical controllers and real share sheets.
 - Figma: the cover lists D1 Practice, D2 Learning and assistance, and D3 Precision challenge pages, all proposed. They were built in a parallel design session and not re-reviewed here. The D3 course and D2 eight were checked against `s-bend-2` and the two-loop eight on 21 October; see the [design check](2026-10-21-gate-closure.md#design-check-d2-eight-and-d3-course).
 - The FigJam dependency diagram still needs a team selected in Figma.
-- Release: done. `main` is deployed to GitHub Pages, with game code at `87c5469`.
+- Release: done. `main` is deployed to GitHub Pages, with game code at `7a3753e`.
 
 The human and iPhone checks continue in the [playtest kit record](2026-10-21-gate-closure.md).
